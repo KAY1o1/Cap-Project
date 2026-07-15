@@ -61,7 +61,7 @@ export default function HomePage(){
                 <div className="db-box">
                      <div className="trend-text"> 
                         <div className="sep">
-                            <h2 id='trend-subt'>Treanding in Your Network</h2>
+                            <h2 id='trend-subt'>Trending in Your Network</h2>
                             <p id='trend-note'> Most liked by people you fellow this week</p>
                         </div>
                         <h3 id='tr-expand-all' onClick={() => SeeAll('trending')}>See all → </h3>
