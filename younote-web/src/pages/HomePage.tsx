@@ -24,7 +24,7 @@ export default function HomePage(){
                 <div className="db-box">
                     <div className="activity-text"> 
                         <div className="sep">
-                            <h2 id='activity-subt'>Friend's Actitvity</h2>
+                            <h2 id='activity-subt'>Friend's Activity</h2>
                             <p id='activity-note'> What your frineds are watching & learning</p>
                         </div>
                         
