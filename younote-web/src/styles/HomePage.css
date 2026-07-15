@@ -4,9 +4,49 @@
     box-sizing: border-box;
 }
 
+#dashboard-title{
+    padding: 10px;
+}
+
+#dashboard-box{
+    padding: 10px 50px;
+}
+
+.dash-line{
+    border: none;
+    height: 1px;
+    background-color: black;
+    width: 90%;
+    padding: 0.5px;
+    margin: 10px auto;
+
+}
+
+.dash-line-end{
+    margin: 20px 0px ;
+}
+
+.sep{
+    display: flex;
+    gap: 10px;
+    align-items: baseline;
+}
+
+#activity-subt{
+    margin: 0;
+    font-size: 1.5rem;
+}
+
+#activity-note{
+    margin: 0;
+    font-size: 0.9rem;
+    color: rgb(78, 77, 77);
+}
+
 .activity-text{
     display: flex;
     flex-direction: row;
+    justify-content:space-between;
 }
 
 #activity-box{
@@ -45,11 +85,79 @@
     border-radius: 4px;
 }
 
+/* Trending */
+
+#trend-subt{
+    margin: 0;
+    font-size: 1.5rem;
+}
+
+#trend-note{
+    margin: 0;
+    font-size: 0.9rem;
+    color: rgb(78, 77, 77);
+}
+
+.trend-text{
+    display: flex;
+    flex-direction: row;
+    justify-content:space-between;
+}
+
+#trend-box{
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 400px;
+    overflow-y: auto;
+    padding: 10px;
+    background-color: rgb(255, 255, 252);
+    
+}
+
+.tre-box{
+    display: flex;
+    flex-direction: row-reverse;
+    justify-content:left;
+    align-items: center;
+    gap: 15px;
+    padding: 12px;
+    background-color: rgb(239, 238, 238);
+    border: 1px solid black;
+    border-radius: 5px;
+   
+}
+.tre-box p{
+    margin: 0;
+    font-size: medium;
+    color: rgb(0, 0, 0);
+}
+
+.tre-box img{
+    width: 50px;
+    height: 50px;
+    object-fit: cover;
+    border-radius: 4px;
+}
+
+
 /* Suggestions */
+
+#suggest-subt{
+    margin: 0;
+    font-size: 1.5rem;
+}
+
+#suggest-note{
+    margin: 0;
+    font-size: 0.9rem;
+    color: rgb(78, 77, 77);
+}
 
 .suggest-text{
     display: flex;
     flex-direction: row;
+    justify-content:space-between;
 }
 
 #suggest-box{
@@ -86,4 +194,32 @@
     height: 100%;
     object-fit: cover;
     border-radius: 4px;
+}
+
+#expand-all, #tr-expand-all, #sug-expand-all{
+    cursor: pointer;
+    user-select: none;
+    transition: gray 0.2s ease, transform 0.2s ease;
+}
+
+#expand-all:hover, #tr-expand-all:hover, #sug-expand-all:hover{
+    color: coral;
+}
+
+.act-box, .tre-box, .sug-box{
+    cursor: pointer;
+    user-select: none;
+    transition: opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+
+}
+
+.act-box:hover, .tre-box:hover, .sug-box:hover{
+    opacity: 0.9;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.192);
+
+}
+
+.act-box img, .tre-box img, .sug-box img{
+    flex-shrink: 0;
+
 }
