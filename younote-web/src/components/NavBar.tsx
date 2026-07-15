@@ -3,8 +3,8 @@ import '../styles/NavBar.css';
 import logoImg from '../assets/images/YouNote.png'
 
 interface NavBarP{
-   setPage: (pageName: string) => void;
-   currentPage: string;
+   setPage: (pageName: 'home' | 'notes') => void;
+   currentPage: 'home' | 'notes';
 }
 
 const NavBar = ({setPage, currentPage}: NavBarP) => {
@@ -17,7 +17,7 @@ const NavBar = ({setPage, currentPage}: NavBarP) => {
             <button onClick={() => setPage('home')} disabled={currentPage === 'home'}>
                Home
             </button>
-            <button onClick={() => setPage('folder')} disabled={currentPage === 'folder'}>
+            <button onClick={() => setPage('notes')} disabled={currentPage === 'notes'}>
                Notes
             </button>
          </div>
