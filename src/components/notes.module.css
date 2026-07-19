@@ -1,0 +1,299 @@
+/* root colors */
+:root {
+  --bg: #0f0f0f;
+  --bg-menu: #212121;
+  --border: #303030;
+
+  --text-primary: #ffffff;
+  --text-secondary: #f1f1f1;
+  --text-muted: #bfbfbf;
+  --placeholder: #888888;
+
+  --accent: #ed6e37;
+  --btn-bg: #272727;
+  --btn-hover: #3a3a3a;
+  --font-main: Roboto, sans-serif;
+}
+
+.container {
+  background: var(--bg);
+  padding: 12px;
+  margin-bottom: 16px;
+  color: var(--text-primary);
+  font-family: var(--font-main);
+  display: flex;
+  flex-direction: column;
+}
+
+.title {
+  margin: 0 0 8px;
+  font-size: 16px;
+  color: var(--text-primary);
+}
+
+/* INPUT TEXT AREA */
+.textarea {
+  width: 100%;
+  min-height: 100px;
+  padding: 12px;
+  resize: vertical;
+  box-sizing: border-box;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  outline: none;
+  background: var(--bg);
+  color: var(--text-secondary);
+  transition: border 0.15s ease;
+}
+
+.textarea::placeholder {
+  color: var(--placeholder);
+}
+
+.textarea:focus {
+  border: 1.5px solid var(--text-secondary);
+  outline: none;
+}
+
+/* submit + toggle button container */
+.hidden-buttons {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* ACTION BUTTONS */
+.submit {
+  display: block;
+  margin-left: auto;
+  margin-top: 8px;
+  padding: 8px 12px;
+  border-radius: 20px;
+  background: var(--btn-bg);
+  color: var(--text-primary);
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-main);
+  font-weight: 500;
+}
+
+.submit:hover {
+  background: var(--btn-hover);
+}
+
+.cancel {
+  padding: 8px 12px;
+  border-radius: 20px;
+  background: none;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  font-family: var(--font-main);
+  font-weight: 500;
+}
+
+.cancel:hover {
+  background: var(--btn-bg);
+  color: var(--text-primary);
+}
+
+/* PUBLIC / PRIVATE TOGGLE */
+.switch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.switch input {
+  display: none;
+}
+
+.slider {
+  width: 36px;
+  height: 20px;
+  background: var(--border);
+  border-radius: 20px;
+  position: relative;
+  transition: 0.2s;
+}
+
+.slider::before {
+  content: "";
+  width: 16px;
+  height: 16px;
+  background: var(--text-primary);
+  border-radius: 50%;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  transition: 0.2s;
+}
+
+.switch input:checked + .slider {
+  background: var(--accent);
+}
+
+.switch input:checked + .slider::before {
+  transform: translateX(16px);
+}
+
+.switch-label {
+  font-family: var(--font-main);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* NOTES CAROUSEL CONTAINER */
+.carousel {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 10px 0;
+  scroll-snap-type: x mandatory;
+}
+
+/* NOTE CARD */
+.card {
+  min-width: 220px;
+  max-width: 220px;
+  box-sizing: border-box;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-content: center;
+  gap: 10px;
+  flex-shrink: 0;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  scroll-snap-align: start;
+}
+
+.note-content {
+  font-size: 14px;
+  color: var(--text-primary);
+  word-break: break-word;
+}
+
+/* CARD HEADER + TIMESTAMP */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.card-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.timestamp {
+  font-family: var(--font-main);
+  background: none;
+  border: none;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.timestamp:hover {
+  color: var(--text-secondary);
+}
+
+.lock {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* OPTIONS DROPDOWN MENU */
+.menu-button {
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.menu-button:hover {
+  color: var(--text-secondary);
+}
+
+.menu-popup {
+  width: 80px;
+  background: var(--bg-menu);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  z-index: 1000;
+}
+
+.menu-popup button {
+  width: 100%;
+  padding: 10px 12px;
+  background: none;
+  border: none;
+  font-family: var(--font-main);
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.menu-popup button:hover {
+  background: var(--btn-hover);
+}
+
+/* CARD EDIT MODE */
+.edit-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.edit-wrapper .textarea {
+  min-height: 60px;
+  padding: 8px;
+  font-size: 14px;
+  border-radius: 8px;
+}
+
+.edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.edit-actions .submit {
+  margin: 0;
+}
+
+/* RATING */
+.rating {
+  justify-content: center;
+  text-align: center;
+  margin: 12px 0;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+.stars {
+  display: flex;
+  justify-content: center;
+  gap: 2px;
+  color: var(--text-primary);
+}
+
+.star {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 24px;
+}
+
+.savedRating {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
