@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import styles from "./notes.module.css"; // 1. Import CSS module
+import styles from "./notes.module.css";
 
 type NoteMenuProps = {
   onEdit: () => void;
