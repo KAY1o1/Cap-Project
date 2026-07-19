@@ -28,7 +28,7 @@ export default function HomePage(){
                             <p id='activity-note'> What your frineds are watching & learning</p>
                         </div>
                         
-                        <h3 id='expand-all' onClick={() => SeeAll('activity')}>See all → </h3>
+                        <h3 id='expand-all' className='see-all-link' onClick={() => SeeAll('activity')}>See all → </h3>
                         
                     </div>
                     
@@ -64,7 +64,7 @@ export default function HomePage(){
                             <h2 id='trend-subt'>Trending in Your Network</h2>
                             <p id='trend-note'> Most liked by people you fellow this week</p>
                         </div>
-                        <h3 id='tr-expand-all' onClick={() => SeeAll('trending')}>See all → </h3>
+                        <h3 id='tr-expand-all' className='see-all-link' onClick={() => SeeAll('trending')}>See all → </h3>
                         
                     </div>
 
@@ -104,7 +104,7 @@ export default function HomePage(){
                             <h2 id='suggest-subt'>Suggested for you</h2>
                             <p id='suggest-note'> Based on your saved notes</p>
                         </div>
-                        <h3 id='sug-expand-all' onClick={() => SeeAll('suggested')}>See all → </h3>
+                        <h3 id='sug-expand-all' className='see-all-link' onClick={() => SeeAll('suggested')}>See all → </h3>
                     </div>
 
                     <div id="suggest-box">
