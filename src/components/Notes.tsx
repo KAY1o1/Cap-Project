@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import NoteMenu from "./NoteMenu";
 import { useSession } from "../lib/auth"; // Google OAuth
+import { ensureProfile } from "../lib/db"; // Supabase: log the user
 import styles from "./notes.module.css";
 
 type Note = {
@@ -59,6 +60,12 @@ async function saveRating(videoId: string, rating: number): Promise<void> {
 export default function NotesPanel() {
   const email = useSession(); // Google OAuth
   const [videoId, setVideoId] = useState<string | null>(getVideoId);
+
+  // When someone is signed in, log their info into the Supabase `profiles` table.
+  useEffect(() => {
+    if (email) ensureProfile();
+  }, [email]);
+
   const [notes, setNotes] = useState<Note[]>([]);
   const [note, setNote] = useState("");
   const [isPublic, setIsPublic] = useState(false);
