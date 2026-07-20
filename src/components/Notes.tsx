@@ -1,7 +1,13 @@
 import { useEffect, useState, useMemo } from "react";
 import NoteMenu from "./NoteMenu";
 import { useSession } from "../lib/auth"; // Google OAuth
-import { ensureProfile } from "../lib/db"; // Supabase: log the user
+// CALLING BACKEND: profiles
+import { ensureProfile } from "../lib/db";
+// CALLING BACKEND: video
+import { ensureVideo } from "../lib/video";
+// CALLING BACKEND: rating
+import { saveRatingToSupabase } from "../lib/ratings";
+// END CALLING BACKEND
 import styles from "./notes.module.css";
 
 type Note = {
@@ -16,6 +22,22 @@ type Note = {
 function getVideoId(): string | null {
   return new URL(window.location.href).searchParams.get("v");
 }
+
+// CALLING BACKEND: extract vid title + creator so we can log the video in Supabase
+function getVideoMeta(): { title: string; creator: string } {
+  const title =
+    document
+      .querySelector("h1.ytd-watch-metadata yt-formatted-string")
+      ?.textContent?.trim() || document.title.replace(/ - YouTube$/, "");
+
+  const creator =
+    document
+      .querySelector("#owner #channel-name a, ytd-channel-name a")
+      ?.textContent?.trim() || "Unknown";
+
+  return { title, creator };
+}
+// END CALLING BACKEND
 
 function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -61,10 +83,15 @@ export default function NotesPanel() {
   const email = useSession(); // Google OAuth
   const [videoId, setVideoId] = useState<string | null>(getVideoId);
 
-  // When someone is signed in, log their info into the Supabase `profiles` table.
+  // CALLING BACKEND: profiles — when someone is signed in, log their info into the Supabase `profiles` table.
   useEffect(() => {
     if (email) ensureProfile();
   }, [email]);
+  // END CALLING BACKEND
+
+  // CALLING BACKEND: video — internal Supabase id for the current video (needed for ratings).
+  const [videoDbId, setVideoDbId] = useState<string | null>(null);
+  // END CALLING BACKEND
 
   const [notes, setNotes] = useState<Note[]>([]);
   const [note, setNote] = useState("");
@@ -113,11 +140,17 @@ export default function NotesPanel() {
       setRating(null);
       setRated(false);
       setShowRating(false);
+      setVideoDbId(null); // CALLING BACKEND: video — reset id on video change
       return;
     }
 
     setEditingId(null);
     setNote("");
+
+    // CALLING BACKEND: video — log this video into the Supabase `videos` table.
+    const { title, creator } = getVideoMeta();
+    ensureVideo(videoId, title, creator).then(setVideoDbId);
+    // END CALLING BACKEND
 
     loadNotes(videoId).then(setNotes);
 
@@ -206,6 +239,10 @@ export default function NotesPanel() {
     setShowRating(false);
 
     saveRating(videoId, value);
+
+    // CALLING BACKEND: rating — log this rating into the Supabase `video_ratings` table.
+    if (videoDbId) saveRatingToSupabase(videoDbId, value);
+    // END CALLING BACKEND
   };
 
   // START OF UI

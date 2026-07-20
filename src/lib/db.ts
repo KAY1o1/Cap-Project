@@ -1,3 +1,4 @@
+// FOR BACKEND: profiles
 import { supabase } from "./supabase";
 
 // Make sure the signed-in user has a row in `profiles`.
