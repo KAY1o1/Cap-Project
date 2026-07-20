@@ -68,6 +68,7 @@ function App() {
       {/* Google OAuth: sign out */}
       <p className="signin-copy">
         Signed in as {email}{" "}
+        <br></br>
         <a onClick={logout} className="signout-link">
           Sign out
         </a>
