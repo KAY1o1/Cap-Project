@@ -204,7 +204,8 @@
 }
 
 .lock {
-  font-size: 12px;
+  /* font-size: 10px; */
+  height: 10px;
   color: var(--text-muted);
 }
 
