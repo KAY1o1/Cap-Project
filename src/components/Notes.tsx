@@ -6,7 +6,9 @@ import { ensureProfile } from "../lib/db";
 // CALLING BACKEND: video
 import { ensureVideo } from "../lib/video";
 // CALLING BACKEND: rating
-import { saveRatingToSupabase } from "../lib/ratings";
+import { fetchRating, saveRatingToSupabase } from "../lib/ratings";
+// CALLING BACKEND: notes
+import { fetchNotes, createNote, updateNote, deleteNote, getCurrentUserId } from "../lib/notes";
 // END CALLING BACKEND
 import styles from "./notes.module.css";
 
@@ -15,7 +17,10 @@ type Note = {
   text: string;
   createdAt: number;
   videoTime: number;
-  isPublic: boolean;
+  // CALLING BACKEND: notes — renamed isPublic to isPrivate to keep it consistent with the Supabase `is_private` column.
+  isPrivate: boolean;
+  // END CALLING BACKEND
+  profileId: string;
 };
 
 // EXTRACT VID ID FROM URL
@@ -45,40 +50,6 @@ function formatTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-// CHROME STORAGE
-async function loadNotes(videoId: string): Promise<Note[]> {
-  try {
-    const res = await chrome.storage.local.get(videoId);
-    const notes = (res[videoId] ?? []) as Note[];
-    return notes.map((note) => ({
-      ...note,
-      isPublic: note.isPublic ?? false,
-    }));
-  } catch (err) {
-    console.error("Failed to load notes:", err);
-    return [];
-  }
-}
-
-async function saveNotes(videoId: string, notes: Note[]): Promise<void> {
-  await chrome.storage.local.set({ [videoId]: notes });
-}
-
-async function loadRating(videoId: string): Promise<number | null> {
-  const key = `${videoId}-rating`;
-  const res = await chrome.storage.local.get(key);
-  const value = res[key];
-
-  if (typeof value === "number") { return value; }
-  return null;
-}
-
-async function saveRating(videoId: string, rating: number): Promise<void> {
-  await chrome.storage.local.set({
-    [`${videoId}-rating`]: rating,
-  });
-}
-
 export default function NotesPanel() {
   const email = useSession(); // Google OAuth
   const [videoId, setVideoId] = useState<string | null>(getVideoId);
@@ -93,9 +64,19 @@ export default function NotesPanel() {
   const [videoDbId, setVideoDbId] = useState<string | null>(null);
   // END CALLING BACKEND
 
+  // CALLING BACKEND: notes — who's signed in, so we only show Edit/Delete on that user's own notes.
+  const [userId, setUserId] = useState<string | null>(null);
+  useEffect(() => {
+    if (email) getCurrentUserId().then(setUserId);
+    else setUserId(null);
+  }, [email]);
+  // END CALLING BACKEND
+
   const [notes, setNotes] = useState<Note[]>([]);
   const [note, setNote] = useState("");
-  const [isPublic, setIsPublic] = useState(false);
+  // CALLING BACKEND: notes — renamed isPublic to isPrivate to keep it consistent with the Supabase `is_private` column.
+  const [isPrivate, setIsPrivate] = useState(true);
+  // END CALLING BACKEND
   const [showControls, setShowControls] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
@@ -149,18 +130,29 @@ export default function NotesPanel() {
 
     // CALLING BACKEND: video — log this video into the Supabase `videos` table.
     const { title, creator } = getVideoMeta();
-    ensureVideo(videoId, title, creator).then(setVideoDbId);
-    // END CALLING BACKEND
+    ensureVideo(videoId, title, creator).then((dbId) => {
+      setVideoDbId(dbId);
+      // CALLING BACKEND: notes — load notes for this video from Supabase.
+      if (dbId) fetchNotes(dbId).then(setNotes);
+      else setNotes([]);
+      // END CALLING BACKEND
 
-    loadNotes(videoId).then(setNotes);
+      // CALLING BACKEND: rating — load this user's rating for this video from Supabase.
+      if (dbId) {
+        fetchRating(dbId).then((savedRating) => {
+          setRating(savedRating);
 
-    loadRating(videoId).then((savedRating) => {
-      setRating(savedRating);
-
-      if (savedRating !== null) {
-        setRated(true);
+          if (savedRating !== null) {
+            setRated(true);
+          }
+        });
+      } else {
+        setRating(null);
+        setRated(false);
       }
+      // END CALLING BACKEND
     });
+    // END CALLING BACKEND
   }, [videoId]);
 
   // SORT ON UPDATE
@@ -176,24 +168,21 @@ export default function NotesPanel() {
 
   // MUTATION HELPER
   const mutateNotes = (updater: (prev: Note[]) => Note[]) => {
-    if (!videoId) return;
-    setNotes((prev) => {
-      const updated = updater(prev);
-      saveNotes(videoId, updated);
-      return updated;
-    });
+    setNotes((prev) => updater(prev));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!note.trim()) return;
 
-    const newNote: Note = {
-      id: crypto.randomUUID(),
-      text: note.trim(),
-      createdAt: Date.now(),
-      videoTime: getCurrentVideoTime(),
-      isPublic,
-    };
+    // CALLING BACKEND: notes — insert this note into the Supabase `notes` table.
+    if (!videoDbId) {
+      console.log("[YouNote] handleSubmit: videoDbId not ready yet, skipping note save");
+      return;
+    }
+
+    const newNote = await createNote(videoDbId, note.trim(), getCurrentVideoTime(), isPrivate);
+    // END CALLING BACKEND
+    if (!newNote) return;
 
     mutateNotes((prev) => [...prev, newNote]);
     setNote("");
@@ -201,6 +190,9 @@ export default function NotesPanel() {
 
   const handleDelete = (id: string) => {
     mutateNotes((prev) => prev.filter((n) => n.id !== id));
+    // CALLING BACKEND: notes — delete this note from Supabase.
+    deleteNote(id);
+    // END CALLING BACKEND
   };
 
   const startEdit = (id: string, text: string) => {
@@ -218,6 +210,9 @@ export default function NotesPanel() {
     mutateNotes((prev) =>
       prev.map((n) => (n.id === editingId ? { ...n, text: trimmed } : n))
     );
+    // CALLING BACKEND: notes — save the edited text to Supabase.
+    updateNote(editingId, trimmed);
+    // END CALLING BACKEND
     cancelEdit();
   };
 
@@ -237,8 +232,6 @@ export default function NotesPanel() {
     setRating(value);
     setRated(true);
     setShowRating(false);
-
-    saveRating(videoId, value);
 
     // CALLING BACKEND: rating — log this rating into the Supabase `video_ratings` table.
     if (videoDbId) saveRatingToSupabase(videoDbId, value);
@@ -279,18 +272,20 @@ export default function NotesPanel() {
             <label className={styles.switch} onMouseDown={(e) => e.preventDefault()}>
               <input
                 type="checkbox"
-                checked={isPublic}
-                onChange={(e) => setIsPublic(e.target.checked)}
+                checked={!isPrivate}
+                onChange={(e) => setIsPrivate(!e.target.checked)}
               />
               <span className={styles.slider}></span>
               <span className={styles["switch-label"]}>
-                {isPublic ? "Public" : "Private"}
+                {isPrivate ? "Private" : "Public"}
               </span>
             </label>
 
-            <button className={styles.submit} onClick={handleSubmit}>
+            {/* CALLING BACKEND: notes — disabled until videoDbId resolves, to avoid a race condition where Submit silently no-ops before Supabase has a row for this video. */}
+            <button className={styles.submit} onClick={handleSubmit} disabled={!videoDbId}>
               Submit
             </button>
+            {/* END CALLING BACKEND */}
           </div>
         )}
       </div>
@@ -334,15 +329,19 @@ export default function NotesPanel() {
             <div key={n.id} className={styles.card}>
               <div className={styles.header}>
                 <div className={styles["card-actions"]}>
-                  {!n.isPublic && <span className={styles.lock}>🔒</span>}
+                  {n.isPrivate && <span className={styles.lock}>🔒</span>}
                   <button className={styles.timestamp} onClick={() => seekTo(n.videoTime)}>
                     @{formatTime(n.videoTime)}
                   </button>
                 </div>
-                <NoteMenu
-                  onEdit={() => startEdit(n.id, n.text)}
-                  onDelete={() => handleDelete(n.id)}
-                />
+                {/* CALLING BACKEND: notes — only the note's owner can edit/delete it (RLS enforces this server-side too, this just hides the buttons for other users' public notes). */}
+                {n.profileId === userId && (
+                  <NoteMenu
+                    onEdit={() => startEdit(n.id, n.text)}
+                    onDelete={() => handleDelete(n.id)}
+                  />
+                )}
+                {/* END CALLING BACKEND */}
               </div>
 
               {editingId === n.id ? (
