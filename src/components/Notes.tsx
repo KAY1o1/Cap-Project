@@ -335,7 +335,7 @@ export default function NotesPanel() {
             <div key={n.id} className={styles.card}>
               <div className={styles.header}>
                 <div className={styles["card-actions"]}>
-                  {n.isPublic && <span className={styles.lock}>
+                  {!n.isPrivate && <span className={styles.lock}>
                     {/* eye open */}
                     <svg width="18" height="12" viewBox="0 0 18 12" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <circle cx="8.75" cy="5.75" r="2" fill="#E6E6E6" />
@@ -343,7 +343,7 @@ export default function NotesPanel() {
                     </svg>
 
                   </span>}
-                  {!n.isPublic && <span className={styles.lock}>
+                  {n.isPrivate && <span className={styles.lock}>
                     {/* eye closed */}
                     <svg width="18" height="10" viewBox="0 0 18 10" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path d="M16.6093 1.00002C11.6427 6.92528 6.20311 7.15316 1.00002 1.00002" stroke="#E6E6E6" stroke-width="2" stroke-linecap="round" />
