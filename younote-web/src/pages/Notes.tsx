@@ -1,13 +1,3 @@
-<<<<<<< HEAD
-// import React from 'react';
-import '../styles/Notes.css';
-
-export default function Notes(){
-    return(
-        <div className="hello"> Notes</div>
-
-    );
-=======
 import { useEffect, useState, type FormEvent } from "react";
 import type { SingleValue } from "react-select";
 import NotesModal from "../components/NotesModal";
@@ -252,5 +242,4 @@ export default function Notes() {
       />
     </div>
   );
->>>>>>> b7a9142ba4a1d64af5c5d1e20ca81933e16684cb
 }
