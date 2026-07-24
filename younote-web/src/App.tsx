@@ -1,12 +1,26 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import type { Session } from '@supabase/supabase-js'
+import {supabase} from './lib/supabase'
 import NavBar from './components/NavBar'
 import HomePage from './pages/HomePage'
 import Notes from './pages/Notes'
-import Friends from './pages/FriendsList'
 
 
 function App() {
-  const [currentPage, setCurrentPage] = useState<'home' | 'notes' | 'friends'>('home')
+ const [currentPage, setCurrentPage] = useState<'home' | 'notes'>('home')
+  const [session, setSession] = useState<Session | null>(null)
+  
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session)
+    })
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session)
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
 
   const Page = () => {
     switch(currentPage){
@@ -14,8 +28,6 @@ function App() {
         return <HomePage/>
       case 'notes':
         return <Notes/>
-      case 'friends':
-        return <Friends/>
       default:
         return <HomePage/>
     }
@@ -23,10 +35,10 @@ function App() {
 
   return (
     <>
-    <NavBar setPage={setCurrentPage} currentPage={currentPage}/>
-    <main className='main-content'>
-      {Page()}
-    </main>
+    <NavBar setPage={setCurrentPage} currentPage={currentPage} session={session}/>
+      <main className='main-content'>
+        {Page()}
+      </main>
     </>
   
   )
