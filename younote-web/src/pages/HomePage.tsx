@@ -1,5 +1,6 @@
 // import React from 'react';
 import '../styles/HomePage.css';
+<<<<<<< HEAD
 import { Images } from '../assets/images';
 
 export default function HomePage(){
@@ -138,6 +139,12 @@ export default function HomePage(){
         
         
         </div>
+=======
+
+export default function HomePage(){
+    return(
+        <div className="hello"> Home Page</div>
+>>>>>>> b7a9142ba4a1d64af5c5d1e20ca81933e16684cb
 
     );
 }

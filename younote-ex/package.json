@@ -2,7 +2,11 @@
   "name": "YouNote",
   "description": "manifest.json description",
   "private": true,
+<<<<<<< HEAD
   "version": "0.0.1",
+=======
+  "version": "0.0.0",
+>>>>>>> b7a9142ba4a1d64af5c5d1e20ca81933e16684cb
   "type": "module",
   "scripts": {
     "dev": "wxt",
