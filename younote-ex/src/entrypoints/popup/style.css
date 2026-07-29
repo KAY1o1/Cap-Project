@@ -1,0 +1,179 @@
+/* root colors */
+:root {
+  --bg: #0f0f0f;
+  --border: #303030;
+
+  --text-primary: #ffffff;
+  --text-muted: #bfbfbf;
+
+  --accent: #ed6e37;
+  --stat-bg: #3d3d3d;
+  --link-hover: #ffffff;
+  --active: #3dd66b;
+
+  --font-main: Inter, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+h1 {
+ font-weight: 500;
+}
+
+p {
+  font-weight: 400;
+}
+
+.popup {
+  width: 280px;
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: var(--font-main);
+  padding: 25px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.title {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 700;
+}
+
+/* EXTENSION ON/OFF TOGGLE */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: var(--font-main);
+}
+
+.toggle-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  flex-shrink: 0;
+  transition: background 0.15s ease;
+}
+
+.toggle-dot--on {
+  background: var(--active);
+}
+
+.toggle-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* STATS CARD */
+.stats-card {
+  background: var(--stat-bg);
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat-number {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.stat-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+/* SEE ALL NOTES */
+.see-all-btn {
+  display: block;
+  width: 100%;
+  text-align: center;
+  padding: 8px 10px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: none;
+  color: var(--text-primary);
+  font-family: var(--font-main);
+  font-weight: 600;
+  font-size: 12px;
+  text-decoration: none;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.see-all-btn:hover {
+  background: var(--stat-bg);
+}
+
+/* FOOTER LINKS */
+.links {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  padding-top: 2px;
+  /* padding: 5px; */
+}
+
+.link {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.link:hover {
+  color: var(--link-hover);
+  text-decoration: underline;
+}
+
+/* SIGN-IN STATE */
+.signin-copy {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: center;
+  margin: 0;
+}
+
+.signin-btn {
+  padding: 7px 10px;
+  border-radius: 16px;
+  border: none;
+  background: var(--accent);
+  color: var(--text-primary);
+  font-family: var(--font-main);
+  font-weight: 600;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.signin-btn:hover {
+  opacity: 0.9;
+}
+
+/* FOOTER */
+.signout-link {
+  color: var(--accent);
+  cursor: pointer;
+}
