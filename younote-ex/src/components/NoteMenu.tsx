@@ -1,15 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import styles from "./notes.module.css";
 
 type NoteMenuProps = {
   onEdit: () => void;
   onDelete: () => void;
 };
 
-export default function NoteMenu({
-  onEdit,
-  onDelete,
-}: NoteMenuProps) {
+export default function NoteMenu({ onEdit, onDelete }: NoteMenuProps) {
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState({ top: 0, left: 0 });
 
@@ -18,8 +16,11 @@ export default function NoteMenu({
 
   const toggleMenu = () => {
     if (!buttonRef.current) return;
+    console.log(styles.carousel);
+    console.log(document.querySelector(`.${styles.carousel}`));
 
     const rect = buttonRef.current.getBoundingClientRect();
+    console.log(rect);
 
     setPosition({
       top: rect.bottom + 8,
@@ -44,22 +45,29 @@ export default function NoteMenu({
       }
     }
 
-    const carousel = document.getElementById("yn-carousel");
+    // FIND CAROUSEL BASED ON CLASS
+    const carousel = document.querySelector<HTMLElement>(`.${styles.carousel}`);
 
     // PREVENT SCROLLING
     if (open) {
       document.addEventListener("mousedown", handleClickOutside);
       document.body.style.overflow = "hidden";
-      if (carousel) { carousel.style.overflowX = "hidden"; }
+      if (carousel) {
+        carousel.style.overflowX = "hidden";
+      }
     } else {
       document.body.style.overflow = "";
-      if (carousel) { carousel.style.overflowX = "auto"; }
+      if (carousel) {
+        carousel.style.overflowX = "auto";
+      }
     }
 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
       document.body.style.overflow = "";
-      if (carousel) { carousel.style.overflowX = "auto"; }
+      if (carousel) {
+        carousel.style.overflowX = "auto";
+      }
     };
   }, [open]);
 
@@ -68,7 +76,7 @@ export default function NoteMenu({
       {/* 3DOT MENU SVG */}
       <button
         ref={buttonRef}
-        className="yn-menu-button"
+        className={styles["menu-button"]}
         onClick={toggleMenu}
       >
         <svg
@@ -88,25 +96,26 @@ export default function NoteMenu({
         createPortal(
           <div
             ref={menuRef}
-            className="yn-menu-popup"
+            className={styles["menu-popup"]}
             style={{
               position: "fixed",
               top: position.top,
               left: position.left,
               zIndex: 9999,
             }}>
-
-            <button onClick={() => {
-              onEdit();
-              setOpen(false);
-            }}>
+            <button
+              onClick={() => {
+                onEdit();
+                setOpen(false);
+              }}>
               Edit
             </button>
 
-            <button onClick={() => {
-              onDelete();
-              setOpen(false);
-            }}>
+            <button
+              onClick={() => {
+                onDelete();
+                setOpen(false);
+              }}>
               Delete
             </button>
           </div>,

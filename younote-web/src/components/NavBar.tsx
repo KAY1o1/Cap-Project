@@ -27,12 +27,8 @@ const NavBar = ({ setPage, currentPage, UserUrl, session }: NavBarP) => {
             </div>
 
             <div className="profile">
-               {UserUrl ? (
-                  <img src={UserUrl} alt="User Profile" className='profile-image' />
-               ) : (
-                  <div className="defualt-profile" title={session?.user?.email}>
-                     ( •̀ ω •́ )✧
-                  </div>
+               {session && UserUrl && (
+                   <img src={UserUrl} alt="Profile" className="avatar-img" style={{ width: 40, height: 40, borderRadius: '50%' }} />
                )}
             </div>
 
