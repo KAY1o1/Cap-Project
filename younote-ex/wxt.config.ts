@@ -9,12 +9,8 @@ export default defineConfig({
     host_permissions: ['https://www.youtube.com/*'],
     permissions: ["storage"],
   },
-<<<<<<< HEAD
   webExt: {
     // Don't open a browser automatically
     disabled: true,
   },
 });
-=======
-});
->>>>>>> b7a9142ba4a1d64af5c5d1e20ca81933e16684cb
