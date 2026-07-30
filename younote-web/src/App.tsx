@@ -14,8 +14,6 @@ function App() {
         return <HomePage/>
       case 'notes':
         return <Notes/>
-      // case 'friends':
-      //   return <Friends/>
       default:
         return <HomePage/>
     }
