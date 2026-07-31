@@ -1,16 +1,25 @@
 import { defineConfig } from 'wxt';
+import { fileURLToPath } from 'node:url';
 
-// See https://wxt.dev/api/config.html
 export default defineConfig({
-  modules: ['@wxt-dev/module-react'],
+  // Tells Chrome to enable chrome.storage for your group's code
   srcDir: 'src',
-  // manifest
   manifest: {
-    host_permissions: ['https://www.youtube.com/*'],
-    permissions: ["storage"],
+    permissions: ['storage'],
   },
-  webExt: {
-    // Don't open a browser automatically
-    disabled: true,
-  },
+
+  vite: () => ({
+    resolve: {
+      alias: {
+        '@web': fileURLToPath(new URL('../younote-web/src', import.meta.url)),
+        'react': fileURLToPath(new URL('./node_modules/react', import.meta.url)),
+        'react-dom': fileURLToPath(new URL('./node_modules/react-dom', import.meta.url)),
+      },
+    },
+    server: {
+      fs: {
+        allow: ['..'],
+      },
+    },
+  }),
 });

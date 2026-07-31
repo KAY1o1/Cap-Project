@@ -50,7 +50,9 @@ function App() {
             </div>
           </div>
 
+          {/* Links to Website */}
           <a
+            href="/notes.html"
             target="_blank"
             rel="noreferrer"
             className="see-all-btn"
@@ -59,16 +61,19 @@ function App() {
           </a>
 
           <div className="links">
-            <a href="#" className="link">Bugs?</a>
-            <a href="#" className="link">FAQ</a>
+            <a href="#" className="link">
+              Bugs?
+            </a>
+            <a href="#" className="link">
+              FAQ
+            </a>
           </div>
         </>
       )}
 
       {/* Google OAuth: sign out */}
       <p className="signin-copy">
-        Signed in as {email}{" "}
-        <br></br>
+        Signed in as {email} <br></br>
         <a onClick={logout} className="signout-link">
           Sign out
         </a>
