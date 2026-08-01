@@ -68,7 +68,6 @@ export default function HomePage() {
 
                 if (isMounted) setHasUser(true);
 
-                // Fetch parallel dashboard resources
                 const [activity, trend, rating] = await Promise.all([
                     supabase
                         .from("notes")
@@ -109,7 +108,6 @@ export default function HomePage() {
 
         fetchContent();
 
-        // Re-fires automatically the instant window.postMessage updates the tokens in App.tsx
         const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
             fetchContent();
         });
