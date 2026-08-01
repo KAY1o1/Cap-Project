@@ -12,14 +12,14 @@ function App() {
   const { data: { session } } = await supabase.auth.getSession();
   
   if (session) {
-    // 1. Grab the tokens from the extension's active session
+    // Grab the tokens from the extension's active session
     const accessToken = session.access_token;
     const refreshToken = session.refresh_token;
     
-    // 2. Build the URL pointing to your website with tokens attached
+    // Build the URL pointing to your website with tokens attached
     const websiteUrl = `http://localhost:5173/?access_token=${accessToken}&refresh_token=${refreshToken}`;
     
-    // 3. Open the website tab
+    // Open the website tab
     chrome.tabs.create({ url: websiteUrl });
   } else {
     alert("Please log in to the extension first!");

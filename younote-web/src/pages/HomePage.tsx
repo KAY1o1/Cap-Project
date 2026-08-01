@@ -56,7 +56,7 @@ export default function HomePage() {
             try {
                 setLoading(true);
 
-                // 1. Authenticate user session passed over from the extension window
+                // Authenticate user session passed over from the extension window
                 const { data: { user } } = await supabase.auth.getUser();
                 if (!user) {
                     if (isMounted) {
@@ -68,7 +68,7 @@ export default function HomePage() {
 
                 if (isMounted) setHasUser(true);
 
-                // 2. Fetch parallel dashboard resources
+                // Fetch parallel dashboard resources
                 const [activity, trend, rating] = await Promise.all([
                     supabase
                         .from("notes")
@@ -109,7 +109,7 @@ export default function HomePage() {
 
         fetchContent();
 
-        // 3. Re-fires automatically the instant window.postMessage updates the tokens in App.tsx
+        // Re-fires automatically the instant window.postMessage updates the tokens in App.tsx
         const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
             fetchContent();
         });
@@ -120,7 +120,6 @@ export default function HomePage() {
         };
     }, []);
 
-    // FIXED: Resolves and compiles valid YouTube middle-quality preview assets
     const getThumb = (videoWrapper: any) => {
         if (!videoWrapper) return Images.placeholder;
         
@@ -140,7 +139,7 @@ export default function HomePage() {
         );
     }
 
-    // ADJUSTED: Rephrased instructions to match your cross-window extension sync strategy
+    
     if (!hasUser) {
         return (
             <div className='home-container' style={{ textAlign: 'center', paddingTop: '60px' }}>

@@ -14,26 +14,26 @@ function App() {
 
   useEffect(() => {
   const syncSessionFromUrl = async () => {
-    // 1. Parse the URL parameters
+
     const urlParams = new URLSearchParams(window.location.search);
     const accessToken = urlParams.get('access_token');
     const refreshToken = urlParams.get('refresh_token');
 
     if (accessToken && refreshToken) {
-      // 2. Manually inject the extension's tokens into the website's Supabase instance
+     
       await supabase.auth.setSession({
         access_token: accessToken,
         refresh_token: refreshToken
       });
 
-      // 3. Clean up the URL so the ugly tokens don't sit in the address bar
+      
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   };
 
-  // Run the URL sync check first
+  
   syncSessionFromUrl().then(() => {
-    // 4. Fallback to normal session tracking once checked
+   
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
     });
