@@ -69,7 +69,7 @@ function App() {
 
       <hr></hr>
 
-      {/* Button handler attached cleanly */}
+
       <button onClick={handleViewAllNotes}>View All Notes</button>
 
       {/* Google OAuth: sign out */}
