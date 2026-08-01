@@ -3,7 +3,6 @@ import { Images } from '../assets/images';
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { renderSection } from '../components/help';
-import type { Session } from '@supabase/supabase-js';
 
 type VideoItem = {
     id: string;
@@ -19,7 +18,7 @@ type RecentItem = {
     video_id: string;
     content: string;
     created_at?: string;
-    video?: VideoItem[] | VideoItem; // Handles both object and single-element array formats
+    video?: VideoItem[] | VideoItem; 
 };
 
 type TrendItem = {
@@ -33,19 +32,15 @@ type RatingItem = {
     video_id: string;
     rating: number;
     created_at?: string;
-    video?: VideoItem[] | VideoItem; // Handles both object and single-element array formats
+    video?: VideoItem[] | VideoItem; 
 };
-
-interface homeP {
-    session: Session | null;
-}
 
 export default function HomePage() {
     const [activities, setActivities] = useState<RecentItem[]>([]);
     const [trends, setTrends] = useState<TrendItem[]>([]);
     const [ratings, setRatings] = useState<RatingItem[]>([]);
     const [loading, setLoading] = useState(true);
-    
+    const [hasUser, setHasUser] = useState(false);
 
     const SeeAll = (type: string) => {
         console.log(`see all ${type}`);
@@ -54,85 +49,113 @@ export default function HomePage() {
         console.log(`Item: ${id}`);
     };
 
+    useEffect(() => {
+        let isMounted = true;
 
-        useEffect(() => {
-        const fetchContent = async()=>{
-            try{
+        const fetchContent = async () => {
+            try {
                 setLoading(true);
 
-                const{data:{user}} = await supabase.auth.getUser();
-                if(!user) return;
+                // 1. Authenticate user session passed over from the extension window
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) {
+                    if (isMounted) {
+                        setHasUser(false);
+                        setLoading(false);
+                    }
+                    return;
+                }
 
-                
-                const[activity, trend, rating] = await Promise.all([
+                if (isMounted) setHasUser(true);
+
+                // 2. Fetch parallel dashboard resources
+                const [activity, trend, rating] = await Promise.all([
                     supabase
-                    .from("notes")
-                    .select(`id, profile_id, video_id, content, created_at, video:videos(id, title, youtube_video_id)`)
-                    .eq("profile_id", user.id)
-                    .order("created_at",{ascending:false})
-                    .limit(4),
+                        .from("notes")
+                        .select(`id, profile_id, video_id, content, created_at, video:videos(id, title, youtube_video_id)`)
+                        .eq("profile_id", user.id)
+                        .order("created_at", { ascending: false })
+                        .limit(4),
 
                     supabase
-                    .from("videos")
-                    .select("id, title, youtube_video_id")
-                    .limit(5),
+                        .from("videos")
+                        .select("id, title, youtube_video_id")
+                        .limit(5),
 
                     supabase
-                    .from("video_ratings")
-                    .select(`profile_id, video_id, rating, created_at, video:videos(id, title, youtube_video_id)`)
-                    .eq("profile_id", user.id)
-                    .order("created_at", {ascending: false})
-                    .limit(4),
-
+                        .from("video_ratings")
+                        .select(`profile_id, video_id, rating, created_at, video:videos(id, title, youtube_video_id)`)
+                        .eq("profile_id", user.id)
+                        .order("created_at", { ascending: false })
+                        .limit(4),
                 ]);
 
-                setActivities((activity.data as RecentItem[]) || []);
-                setTrends((trend.data as TrendItem[]) || []);
-                setRatings((rating.data as unknown as RatingItem[]) || []);
-                
-            
-
-            }catch (error){
-                setActivities([]);
-                setTrends([]);
-                setRatings([]);
-
-            }finally{
-                setLoading(false);
+                if (isMounted) {
+                    setActivities((activity.data as RecentItem[]) || []);
+                    setTrends((trend.data as TrendItem[]) || []);
+                    setRatings((rating.data as unknown as RatingItem[]) || []);
+                }
+            } catch (error) {
+                console.error("Error loading dashboard metrics:", error);
+                if (isMounted) {
+                    setActivities([]);
+                    setTrends([]);
+                    setRatings([]);
+                }
+            } finally {
+                if (isMounted) setLoading(false);
             }
         };
+
         fetchContent();
 
+        // 3. Re-fires automatically the instant window.postMessage updates the tokens in App.tsx
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+            fetchContent();
+        });
+
+        return () => {
+            isMounted = false;
+            subscription.unsubscribe();
+        };
     }, []);
- 
 
-
+    // FIXED: Resolves and compiles valid YouTube middle-quality preview assets
     const getThumb = (videoWrapper: any) => {
-       
+        if (!videoWrapper) return Images.placeholder;
+        
         const actualVideo = Array.isArray(videoWrapper) ? videoWrapper[0] : videoWrapper;
-        return actualVideo?.youtube_video_id 
-            ? `...` 
+        const videoId = actualVideo?.youtube_video_id;
+
+        return videoId 
+            ? `https://youtube.com{videoId}/mqdefault.jpg` 
             : Images.placeholder;
     };
 
     if (loading) {
-        return <div className='home-container'><h3>Loading application context...</h3></div>;
+        return (
+            <div className='home-container'>
+                <h3>Loading application context...</h3>
+            </div>
+        );
+    }
+
+    // ADJUSTED: Rephrased instructions to match your cross-window extension sync strategy
+    if (!hasUser) {
+        return (
+            <div className='home-container' style={{ textAlign: 'center', paddingTop: '60px' }}>
+                <h3>Extension Sync Pending</h3>
+                <p>Please click <strong>"View All Notes"</strong> inside your browser extension popup window to securely sync your dashboard view profiles.</p>
+            </div>
+        );
     }
 
     return (
         <div className="home-container">
             <h1 id='dashboard-title'>Notes Dashboard</h1>
-            
-{/*             
-            {!activeSession && (
-                <div style={{ padding: '12px', textAlign: 'center', background: '#fff3cd', color: '#856404', borderRadius: '4px', margin: '15px 0' }}>
-                    <strong>Extension Sync Pending:</strong> Please log in to your video tool extension to display your tracking rows.
-                </div>
-            )} */}
-            
             <hr className='note-dash' />
+            
             <div id="dashboard-box">
-
                 {/* Recent Activity Section */}
                 {renderSection({
                     title: "Recent Activity",
@@ -190,9 +213,7 @@ export default function HomePage() {
                         </div>
                     )
                 })}
-
             </div>
         </div>
     );
 }
-
