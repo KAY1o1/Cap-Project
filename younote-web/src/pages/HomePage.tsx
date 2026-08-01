@@ -68,6 +68,7 @@ export default function HomePage() {
 
                 if (isMounted) setHasUser(true);
 
+
                 const [activity, trend, rating] = await Promise.all([
                     supabase
                         .from("notes")
