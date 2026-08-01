@@ -8,9 +8,6 @@ import Notes from './pages/Notes'
 function App() {
   const [currentPage, setCurrentPage] = useState<'home' | 'notes'>('home')
   const [session, setSession] = useState<Session | null>(null)
-  
-
-
 
   useEffect(() => {
   const syncSessionFromUrl = async () => {
@@ -26,7 +23,6 @@ function App() {
         refresh_token: refreshToken
       });
 
-      
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   };
@@ -45,8 +41,6 @@ function App() {
 
   return () => subscription.unsubscribe();
 }, []);
-
-
 
  
   const Page = () => {
