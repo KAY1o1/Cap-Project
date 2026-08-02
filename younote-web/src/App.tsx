@@ -46,11 +46,11 @@ function App() {
   const Page = () => {
     switch(currentPage){
       case 'home':
-        return <HomePage />
+        return <HomePage setPage={setCurrentPage}/>
       case 'notes':
         return <Notes />
       default:
-        return <HomePage />
+        return <HomePage setPage={setCurrentPage}/>
     }
   }
 

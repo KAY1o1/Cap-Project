@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { renderSection } from '../components/help';
 
+
 type VideoItem = {
     id: string;
     title: string;
@@ -18,7 +19,8 @@ type RecentItem = {
     video_id: string;
     content: string;
     created_at?: string;
-    video?: VideoItem[] | VideoItem; 
+    timestamp_seconds?: number;
+    video?: VideoItem[] | VideoItem;
 };
 
 type TrendItem = {
@@ -32,10 +34,14 @@ type RatingItem = {
     video_id: string;
     rating: number;
     created_at?: string;
-    video?: VideoItem[] | VideoItem; 
+    video?: VideoItem[] | VideoItem;
 };
 
-export default function HomePage() {
+type HomePageP = {
+    setPage: (page: 'home' | 'notes') => void;
+};
+
+export default function HomePage({ setPage }: HomePageP) {
     const [activities, setActivities] = useState<RecentItem[]>([]);
     const [trends, setTrends] = useState<TrendItem[]>([]);
     const [ratings, setRatings] = useState<RatingItem[]>([]);
@@ -43,8 +49,12 @@ export default function HomePage() {
     const [hasUser, setHasUser] = useState(false);
 
     const SeeAll = (type: string) => {
-        console.log(`see all ${type}`);
+        if (type === 'activity') {
+            setPage('notes');
+        }
     };
+
+
     const ItemClick = (id: string) => {
         console.log(`Item: ${id}`);
     };
@@ -56,7 +66,7 @@ export default function HomePage() {
             try {
                 setLoading(true);
 
-                // Authenticate user session passed over from the extension window
+
                 const { data: { user } } = await supabase.auth.getUser();
                 if (!user) {
                     if (isMounted) {
@@ -72,7 +82,7 @@ export default function HomePage() {
                 const [activity, trend, rating] = await Promise.all([
                     supabase
                         .from("notes")
-                        .select(`id, profile_id, video_id, content, created_at, video:videos(id, title, youtube_video_id)`)
+                        .select(`id, profile_id, video_id, content, created_at, timestamp_seconds, video:videos!video_id(id, title, youtube_video_id, creator)`)
                         .eq("profile_id", user.id)
                         .order("created_at", { ascending: false })
                         .limit(4),
@@ -121,12 +131,14 @@ export default function HomePage() {
 
     const getThumb = (videoWrapper: any) => {
         if (!videoWrapper) return Images.placeholder;
-        
-        const actualVideo = Array.isArray(videoWrapper) ? videoWrapper[0] : videoWrapper;
+
+        const actualVideo = videoWrapper.youtube_video_id ? videoWrapper
+            : (Array.isArray(videoWrapper) ? videoWrapper[0] : videoWrapper);
+
         const videoId = actualVideo?.youtube_video_id;
 
-        return videoId 
-            ? `https://youtube.com{videoId}/mqdefault.jpg` 
+        return videoId
+            ? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`
             : Images.placeholder;
     };
 
@@ -138,12 +150,12 @@ export default function HomePage() {
         );
     }
 
-    
+
     if (!hasUser) {
         return (
             <div className='home-container' style={{ textAlign: 'center', paddingTop: '60px' }}>
                 <h3>Extension Sync Pending</h3>
-                <p>Please click <strong>"View All Notes"</strong> inside your browser extension popup window to securely sync your dashboard view profiles.</p>
+                <p>Sign into the extension and click <strong>"View All Notes"</strong> </p>
             </div>
         );
     }
@@ -152,8 +164,9 @@ export default function HomePage() {
         <div className="home-container">
             <h1 id='dashboard-title'>Notes Dashboard</h1>
             <hr className='note-dash' />
-            
+
             <div id="dashboard-box">
+
                 {/* Recent Activity Section */}
                 {renderSection({
                     title: "Recent Activity",
@@ -164,12 +177,57 @@ export default function HomePage() {
                     onSeeAll: SeeAll,
                     onItemClick: ItemClick,
                     placeholderImage: Images.placeholder,
-                    renderItem: (item) => (
-                        <div key={item.id} className='act-box' onClick={() => ItemClick(item.video_id)}>
-                            <p>{item.content}</p>
-                            <div><img src={getThumb(item.video)} alt="thumbnail" /></div>
-                        </div>
-                    )
+                    renderItem: (item) => {
+
+                        let videoData: VideoItem | null = null;
+                        if (item.video) {
+                            videoData = Array.isArray(item.video) ? item.video[0] : item.video;
+                        }
+
+                        const titleText = videoData?.title || "Title";
+                        const creatorText = videoData?.creator || "Creator";
+
+                        const formatVideoTimestamp = (totalSeconds: number | undefined) => {
+                            if (totalSeconds === undefined || totalSeconds === null) return null;
+
+                            const hrs = Math.floor(totalSeconds / 3600);
+                            const mins = Math.floor((totalSeconds % 3600) / 60);
+                            const secs = Math.floor(totalSeconds % 60);
+
+                            const paddedSecs = secs.toString().padStart(2, '0');
+
+                            if (hrs > 0) {
+                                const paddedMins = mins.toString().padStart(2, '0');
+                                return `${hrs}:${paddedMins}:${paddedSecs}`;
+                            }
+
+                            return `${mins}:${paddedSecs}`;
+                        };
+
+                        const videoTimeMarker = formatVideoTimestamp(item.timestamp_seconds);
+
+                        return (
+
+                            <div key={item.id} className='act-box' onClick={() => ItemClick(item.video_id)}>
+                                <div className="act-details">
+
+                                    <h5 className="act-video-title" style={{ fontSize: '11px' }}>{titleText}</h5>
+                                    <p className="act-video-creator" style={{ fontSize: '10px' }}>by {creatorText}</p>
+
+                                    <hr className='dash-ra' />
+
+                                    <p className="act-content" style={{ fontSize: '12px' }}>"{item.content}"</p>
+
+                                    {videoTimeMarker && <span className="act-video-time" style={{ fontSize: '11px' }}> <strong>{videoTimeMarker}</strong> </span>}
+                                </div>
+                                <div className="act-thumb-container">
+                                    <img src={getThumb(item.video)} alt="thumbnail" />
+                                </div>
+                            </div>
+
+
+                        );
+                    }
                 })}
 
                 <hr className='dash-line-end' />
@@ -180,15 +238,19 @@ export default function HomePage() {
                     subtitle: "Interesting categories to explore",
                     typeKey: "trend",
                     items: trends,
-                    emptyText: "...",
+                    emptyText: "Nothing Trending at the moment",
                     onSeeAll: SeeAll,
                     onItemClick: ItemClick,
                     placeholderImage: Images.placeholder,
                     renderItem: (item) => (
-                        <div key={item.id} className='tre-box' onClick={() => ItemClick(item.id)}>
-                            <p>{item.title}</p>
-                            <div><img src={getThumb(item)} alt="trend snapshot" /></div>
-                        </div>
+                        <a key={item.id} href={`https://www.youtube.com/watch?v=${item.youtube_video_id}`}
+                            style={{ textDecoration: 'none', color: 'inherit', textDecorationLine: 'none' }}
+                        >
+                            <div key={item.id} className='tre-box' onClick={() => ItemClick(item.id)}>
+                                <p>{item.title}</p>
+                                <div><img src={getThumb(item)} alt="trend snapshot" /></div>
+                            </div>
+                        </a>
                     )
                 })}
 
@@ -206,12 +268,12 @@ export default function HomePage() {
                     placeholderImage: Images.placeholder,
                     renderItem: (item) => (
                         <div key={`${item.profile_id}-${item.video_id}`} className='sug-box' onClick={() => ItemClick(item.video_id)}>
-                            <p>Rating: {item.rating} ✏️</p>
+                            <p>Rating: {item.rating}/5 {"✏️".repeat(Math.max(0, Math.min(5, Math.floor(item.rating))))}</p>
                             <div><img src={getThumb(item.video)} alt="thumbnail" /></div>
                         </div>
                     )
                 })}
             </div>
-        </div>
+        </div >
     );
 }

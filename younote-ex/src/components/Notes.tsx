@@ -11,7 +11,7 @@ import { fetchRating, saveRatingToSupabase } from "../lib/ratings";
 import { fetchNotes, createNote, updateNote, deleteNote, restoreNote, getCurrentUserId } from "../lib/notes";
 // END CALLING BACKEND
 // FILTER: hateful speech
-import { containsHatefulLanguage } from "../lib/profanity";
+// import { containsHatefulLanguage } from "../lib/profanity";
 // END FILTER
 import styles from "./notes.module.css";
 
@@ -274,10 +274,10 @@ export default function NotesPanel() {
     if (!trimmed) return;
 
     // FILTER: hateful speech — block hateful/racist notes before they're saved.
-    if (containsHatefulLanguage(trimmed)) {
-      setNoteError("This note contains hateful or offensive language. Please rephrase it.");
-      return;
-    }
+    // if (containsHatefulLanguage(trimmed)) {
+    //   setNoteError("This note contains hateful or offensive language. Please rephrase it.");
+    //   return;
+    // }
     setNoteError(null);
     // END FILTER
 
@@ -320,10 +320,10 @@ export default function NotesPanel() {
     }
 
     // FILTER: hateful speech — block hateful/racist notes before they're saved.
-    if (containsHatefulLanguage(trimmed)) {
-      setEditError("This note contains hateful or offensive language. Please rephrase it.");
-      return;
-    }
+    // if (containsHatefulLanguage(trimmed)) {
+    //   setEditError("This note contains hateful or offensive language. Please rephrase it.");
+    //   return;
+    // }
     // END FILTER
 
     const original = notes.find((n) => n.id === editingId);
