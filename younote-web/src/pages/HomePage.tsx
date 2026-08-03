@@ -49,7 +49,7 @@ export default function HomePage({ setPage }: HomePageP) {
     const [hasUser, setHasUser] = useState(false);
 
     const SeeAll = (type: string) => {
-        if (type === 'activity') {
+        if (type === 'activity' || type === 'trend' || type === 'suggest') {
             setPage('notes');
         }
     };
@@ -94,7 +94,7 @@ export default function HomePage({ setPage }: HomePageP) {
 
                     supabase
                         .from("video_ratings")
-                        .select(`profile_id, video_id, rating, created_at, video:videos(id, title, youtube_video_id)`)
+                        .select(`profile_id, video_id, rating, created_at, video:videos!video_id(id, title, youtube_video_id, creator)`)
                         .eq("profile_id", user.id)
                         .order("created_at", { ascending: false })
                         .limit(4),
@@ -145,7 +145,7 @@ export default function HomePage({ setPage }: HomePageP) {
     if (loading) {
         return (
             <div className='home-container'>
-                <h3>Loading application context...</h3>
+                <h3>Loading...</h3>
             </div>
         );
     }
@@ -154,7 +154,6 @@ export default function HomePage({ setPage }: HomePageP) {
     if (!hasUser) {
         return (
             <div className='home-container' style={{ textAlign: 'center', paddingTop: '60px' }}>
-                <h3>Extension Sync Pending</h3>
                 <p>Sign into the extension and click <strong>"View All Notes"</strong> </p>
             </div>
         );
@@ -225,7 +224,6 @@ export default function HomePage({ setPage }: HomePageP) {
                                 </div>
                             </div>
 
-
                         );
                     }
                 })}
@@ -235,7 +233,7 @@ export default function HomePage({ setPage }: HomePageP) {
                 {/* Trending Section */}
                 {renderSection({
                     title: "Trends",
-                    subtitle: "Interesting categories to explore",
+                    subtitle: "Take a look at what others watched",
                     typeKey: "trend",
                     items: trends,
                     emptyText: "Nothing Trending at the moment",
@@ -243,10 +241,12 @@ export default function HomePage({ setPage }: HomePageP) {
                     onItemClick: ItemClick,
                     placeholderImage: Images.placeholder,
                     renderItem: (item) => (
-                        <a key={item.id} href={`https://www.youtube.com/watch?v=${item.youtube_video_id}`}
-                            style={{ textDecoration: 'none', color: 'inherit', textDecorationLine: 'none' }}
+                        <a 
+                        key={item.id} 
+                        href={`https://www.youtube.com/watch?v=${item.youtube_video_id}`}
+                        style={{ textDecoration: 'none', color: 'inherit', textDecorationLine: 'none' }}
                         >
-                            <div key={item.id} className='tre-box' onClick={() => ItemClick(item.id)}>
+                            <div className='tre-box' onClick={() => ItemClick(item.id)}>
                                 <p>{item.title}</p>
                                 <div><img src={getThumb(item)} alt="trend snapshot" /></div>
                             </div>
@@ -266,12 +266,32 @@ export default function HomePage({ setPage }: HomePageP) {
                     onSeeAll: SeeAll,
                     onItemClick: ItemClick,
                     placeholderImage: Images.placeholder,
-                    renderItem: (item) => (
-                        <div key={`${item.profile_id}-${item.video_id}`} className='sug-box' onClick={() => ItemClick(item.video_id)}>
-                            <p>Rating: {item.rating}/5 {"✏️".repeat(Math.max(0, Math.min(5, Math.floor(item.rating))))}</p>
-                            <div><img src={getThumb(item.video)} alt="thumbnail" /></div>
-                        </div>
-                    )
+                    renderItem: (item) => {
+
+                        let videoData: VideoItem | null = null;
+                        if (item.video) {
+                            videoData = Array.isArray(item.video) ? item.video[0] : item.video;
+                        }
+
+                        const titleText = videoData?.title || "Title";
+                        const creatorText = videoData?.creator || "Creator";
+
+                        return (
+                            <div key={`${item.profile_id}-${item.video_id}`} className='sug-box' onClick={() => ItemClick(item.video_id)}>
+
+                                <div className="act-details">
+                                    <h5 className="sug-video-title" style={{ fontSize: '11px' }}>{titleText}</h5>
+                                    <p className="sug-video-creator" style={{ fontSize: '10px' }}>by {creatorText}</p>
+
+                                    <p>Rating: {item.rating}/5 {"✏️".repeat(Math.max(0, Math.min(5, Math.floor(item.rating))))}</p>
+                                </div>
+
+                                <div className="sug-thumb-container">
+                                    <div><img src={getThumb(item.video)} alt="thumbnail" /></div>
+                                </div>
+                            </div>
+                        )
+                    }
                 })}
             </div>
         </div >
