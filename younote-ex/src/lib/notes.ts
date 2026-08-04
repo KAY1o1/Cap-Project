@@ -101,3 +101,17 @@ export async function deleteNote(id: string): Promise<void> {
 
   if (error) console.error("[YouNote] deleteNote failed:", error);
 }
+
+// UNDO/REDO: re-insert a previously-deleted note with its original id.
+export async function restoreNote(note: Note, videoDbId: string): Promise<void> {
+  const { error } = await supabase.from("notes").insert({
+    id: note.id,
+    profile_id: note.profileId,
+    video_id: videoDbId,
+    timestamp_seconds: Math.floor(note.videoTime),
+    content: note.text,
+    is_private: note.isPrivate,
+  });
+
+  if (error) console.error("[YouNote] restoreNote failed:", error);
+}
