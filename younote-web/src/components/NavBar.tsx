@@ -1,14 +1,16 @@
 // import React, {useState} from 'react';
 import '../styles/NavBar.css';
 import logoImg from '../assets/images/YouNote.png'
+import type { Session } from '@supabase/supabase-js';
 
 interface NavBarP {
-   setPage: (pageName: 'home' | 'notes' | 'friends') => void;
-   currentPage: 'home' | 'notes' | 'friends';
+   setPage: (pageName: 'home' | 'notes' ) => void;
+   currentPage: 'home' | 'notes' ;
    UserUrl?: string;
+   session: Session |null;
 }
 
-const NavBar = ({ setPage, currentPage, UserUrl }: NavBarP) => {
+const NavBar = ({ setPage, currentPage, UserUrl, session }: NavBarP) => {
    return (
       <nav className="navbar-container">
          <div className="logo-section" onClick={() => setPage('home')}>
@@ -25,12 +27,8 @@ const NavBar = ({ setPage, currentPage, UserUrl }: NavBarP) => {
             </div>
 
             <div className="profile">
-               {UserUrl ? (
-                  <img src={UserUrl} alt="User Profile" className='profile-image' />
-               ) : (
-                  <div className="defualt-profile">
-                     ( •̀ ω •́ )✧
-                  </div>
+               {session && UserUrl && (
+                   <img src={UserUrl} alt="Profile" className="avatar-img" style={{ width: 40, height: 40, borderRadius: '50%' }} />
                )}
             </div>
 

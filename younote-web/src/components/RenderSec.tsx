@@ -1,5 +1,4 @@
-
-type render<T> = {
+type RenderSectionProps<T> = {
     title: string;
     subtitle: string;
     typeKey: string;
@@ -8,7 +7,7 @@ type render<T> = {
     renderItem: (item: T) => React.ReactNode;
     onSeeAll: (type: string) => void;    
     onItemClick: (id: string) => void;  
-    placeholderImage: string;  
+    placeholderImage: string;           
 }
 
 export function renderSection<T>({
@@ -21,7 +20,7 @@ export function renderSection<T>({
     onSeeAll,
     onItemClick,
     placeholderImage
-}: render<T>) {
+}: RenderSectionProps<T>) {
     return (
         <div className="db-box">
             <div className={`${typeKey}-text`}>

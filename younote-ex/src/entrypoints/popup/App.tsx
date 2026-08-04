@@ -1,23 +1,46 @@
 import { useState } from "react";
-import "./style.css";
+import "./App.css";
 import { login, logout, useSession } from "../../lib/auth"; // Google OAuth
+import { supabase } from "../../lib/supabase"; 
 
 const numVideos = 12;
 const numNotes = 50;
 
 function App() {
+  const [count, setCount] = useState(0);
   const email = useSession(); // Google OAuth
   const [enabled, setEnabled] = useState(true);
+
+
+  const handleViewAllNotes = async () => {
+  const { data: { session } } = await supabase.auth.getSession();
+  
+  if (session) {
+    // Grab the tokens from the extension's active session
+    const accessToken = session.access_token;
+    const refreshToken = session.refresh_token;
+    
+    // Build the URL pointing to your website with tokens attached
+    const websiteUrl = `http://localhost:5173/?access_token=${accessToken}&refresh_token=${refreshToken}`;
+    
+    // Open the website tab
+    chrome.tabs.create({ url: websiteUrl });
+  } else {
+    alert("Please log in to the extension first!");
+  }
+};
+
 
   // Google OAuth: show login when signed out
   if (!email) {
     return (
       <div className="popup">
-        <h1 className="title">YouNote</h1>
-        <p className="signin-copy">Sign in to use YouNote.</p>
-        <button className="signin-btn" onClick={login}>
-          Sign in with Google
-        </button>
+        <h1>YouNote</h1>
+        <hr></hr>
+        <p style={{ textAlign: "center", fontSize: "13px" }}>
+          Sign in to use YouNote.
+        </p>
+        <button onClick={login}>Sign in with Google</button>
       </div>
     );
   }

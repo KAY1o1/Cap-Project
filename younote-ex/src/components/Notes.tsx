@@ -10,6 +10,9 @@ import { fetchRating, saveRatingToSupabase } from "../lib/ratings";
 // CALLING BACKEND: notes
 import { fetchNotes, createNote, updateNote, deleteNote, getCurrentUserId } from "../lib/notes";
 // END CALLING BACKEND
+// FILTER: hateful speech
+import { containsHatefulLanguage } from "../lib/profanity";
+// END FILTER
 import styles from "./notes.module.css";
 
 type Note = {
@@ -22,6 +25,15 @@ type Note = {
   // END CALLING BACKEND
   profileId: string;
 };
+
+const NOTE_MAX_LENGTH = 150;
+
+// UNDO/REDO: one entry per committed note action (add/delete/edit), so undo/redo
+// can replay the inverse/forward change against both local state and Supabase.
+type NoteAction =
+  | { type: "add"; note: Note }
+  | { type: "delete"; note: Note }
+  | { type: "edit"; id: string; before: string; after: string };
 
 // EXTRACT VID ID FROM URL
 function getVideoId(): string | null {
@@ -86,6 +98,14 @@ export default function NotesPanel() {
   const [showControls, setShowControls] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
+  const [noteError, setNoteError] = useState<string | null>(null);
+  const [editError, setEditError] = useState<string | null>(null);
+
+  // UNDO/REDO: stacks of committed note actions for this video.
+  const [history, setHistory] = useState<{ past: NoteAction[]; future: NoteAction[] }>({
+    past: [],
+    future: [],
+  });
 
   // RATING
   const [showRating, setShowRating] = useState(false);
@@ -113,6 +133,28 @@ export default function NotesPanel() {
     return () => clearInterval(interval);
   }, [videoId, rated]);
 
+  // UNDO/REDO: Ctrl/Cmd+Z to undo, Ctrl/Cmd+Shift+Z or Ctrl/Cmd+Y to redo.
+  // Skipped while focus is in a textarea/input so native text-editing undo isn't hijacked.
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === "TEXTAREA" || target.tagName === "INPUT") return;
+      if (!(e.metaKey || e.ctrlKey)) return;
+
+      const key = e.key.toLowerCase();
+      if (key === "z" && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+      } else if ((key === "z" && e.shiftKey) || key === "y") {
+        e.preventDefault();
+        redo();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [videoDbId]);
+
   // SPA NAVIGATION LISTENER
   useEffect(() => {
     const handleNavigate = () => setVideoId(getVideoId());
@@ -133,6 +175,7 @@ export default function NotesPanel() {
 
     setEditingId(null);
     setNote("");
+    setHistory({ past: [], future: [] });
 
     // CALLING BACKEND: video — log this video into the Supabase `videos` table.
     const { title, creator } = getVideoMeta();
@@ -177,8 +220,66 @@ export default function NotesPanel() {
     setNotes((prev) => updater(prev));
   };
 
+  // UNDO/REDO: record a committed action and clear the redo stack.
+  const pushAction = (action: NoteAction) => {
+    setHistory((h) => ({ past: [...h.past, action], future: [] }));
+  };
+
+  // UNDO/REDO: apply an action's inverse ("undo") or forward ("redo") effect,
+  // to both local state and Supabase.
+  const applyAction = (action: NoteAction, direction: "undo" | "redo") => {
+    if (action.type === "add") {
+      if (direction === "undo") {
+        mutateNotes((prev) => prev.filter((n) => n.id !== action.note.id));
+        deleteNote(action.note.id);
+      } else {
+        mutateNotes((prev) => [...prev, action.note]);
+        if (videoDbId) restoreNote(action.note, videoDbId);
+      }
+    } else if (action.type === "delete") {
+      if (direction === "undo") {
+        mutateNotes((prev) => [...prev, action.note]);
+        if (videoDbId) restoreNote(action.note, videoDbId);
+      } else {
+        mutateNotes((prev) => prev.filter((n) => n.id !== action.note.id));
+        deleteNote(action.note.id);
+      }
+    } else {
+      const text = direction === "undo" ? action.before : action.after;
+      mutateNotes((prev) => prev.map((n) => (n.id === action.id ? { ...n, text } : n)));
+      updateNote(action.id, text);
+    }
+  };
+
+  const undo = () => {
+    setHistory((h) => {
+      if (h.past.length === 0) return h;
+      const action = h.past[h.past.length - 1];
+      applyAction(action, "undo");
+      return { past: h.past.slice(0, -1), future: [...h.future, action] };
+    });
+  };
+
+  const redo = () => {
+    setHistory((h) => {
+      if (h.future.length === 0) return h;
+      const action = h.future[h.future.length - 1];
+      applyAction(action, "redo");
+      return { past: [...h.past, action], future: h.future.slice(0, -1) };
+    });
+  };
+
   const handleSubmit = async () => {
-    if (!note.trim()) return;
+    const trimmed = note.trim();
+    if (!trimmed) return;
+
+    // FILTER: hateful speech — block hateful/racist notes before they're saved.
+    if (containsHatefulLanguage(trimmed)) {
+      setNoteError("This note contains hateful or offensive language. Please rephrase it.");
+      return;
+    }
+    setNoteError(null);
+    // END FILTER
 
     // CALLING BACKEND: notes — insert this note into the Supabase `notes` table.
     if (!videoDbId) {
@@ -186,24 +287,28 @@ export default function NotesPanel() {
       return;
     }
 
-    const newNote = await createNote(videoDbId, note.trim(), getCurrentVideoTime(), isPrivate);
+    const newNote = await createNote(videoDbId, trimmed, getCurrentVideoTime(), isPrivate);
     // END CALLING BACKEND
     if (!newNote) return;
 
     mutateNotes((prev) => [...prev, newNote]);
+    pushAction({ type: "add", note: newNote });
     setNote("");
   };
 
   const handleDelete = (id: string) => {
+    const target = notes.find((n) => n.id === id);
     mutateNotes((prev) => prev.filter((n) => n.id !== id));
     // CALLING BACKEND: notes — delete this note from Supabase.
     deleteNote(id);
     // END CALLING BACKEND
+    if (target) pushAction({ type: "delete", note: target });
   };
 
   const startEdit = (id: string, text: string) => {
     setEditingId(id);
     setEditText(text);
+    setEditError(null);
   };
 
   const saveEdit = () => {
@@ -213,18 +318,31 @@ export default function NotesPanel() {
       cancelEdit();
       return;
     }
+
+    // FILTER: hateful speech — block hateful/racist notes before they're saved.
+    if (containsHatefulLanguage(trimmed)) {
+      setEditError("This note contains hateful or offensive language. Please rephrase it.");
+      return;
+    }
+    // END FILTER
+
+    const original = notes.find((n) => n.id === editingId);
     mutateNotes((prev) =>
       prev.map((n) => (n.id === editingId ? { ...n, text: trimmed } : n))
     );
     // CALLING BACKEND: notes — save the edited text to Supabase.
     updateNote(editingId, trimmed);
     // END CALLING BACKEND
+    if (original && original.text !== trimmed) {
+      pushAction({ type: "edit", id: editingId, before: original.text, after: trimmed });
+    }
     cancelEdit();
   };
 
   const cancelEdit = () => {
     setEditingId(null);
     setEditText("");
+    setEditError(null);
   };
 
   const seekTo = (seconds: number) => {
@@ -256,7 +374,31 @@ export default function NotesPanel() {
 
   return (
     <div className={styles.container}>
-      <h3 className={styles.title}>YouNote</h3>
+      <div className={styles["title-row"]}>
+        <h3 className={styles.title}>YouNote</h3>
+        {/* UNDO/REDO */}
+        <div className={styles["history-buttons"]}>
+          <button
+            type="button"
+            className={styles["history-button"]}
+            onClick={undo}
+            disabled={history.past.length === 0}
+            title="Undo"
+          >
+            ↶
+          </button>
+          <button
+            type="button"
+            className={styles["history-button"]}
+            onClick={redo}
+            disabled={history.future.length === 0}
+            title="Redo"
+          >
+            ↷
+          </button>
+        </div>
+        {/* END UNDO/REDO */}
+      </div>
 
       <div
         onFocus={() => setShowControls(true)}
@@ -268,10 +410,18 @@ export default function NotesPanel() {
       >
         <textarea
           value={note}
-          onChange={(e) => setNote(e.target.value)}
+          onChange={(e) => {
+            setNote(e.target.value);
+            setNoteError(null);
+          }}
           placeholder="Add a note..."
           className={styles.textarea}
+          maxLength={NOTE_MAX_LENGTH}
         />
+        <div className={styles["char-count"]}>
+          {note.length}/{NOTE_MAX_LENGTH}
+        </div>
+        {noteError && <div className={styles["note-error"]}>{noteError}</div>}
 
         {showControls && (
           <div className={styles["hidden-buttons"]}>
@@ -372,8 +522,12 @@ export default function NotesPanel() {
                   <textarea
                     className={styles.textarea}
                     value={editText}
-                    onChange={(e) => setEditText(e.target.value)}
+                    onChange={(e) => {
+                      setEditText(e.target.value);
+                      setEditError(null);
+                    }}
                     autoFocus
+                    maxLength={NOTE_MAX_LENGTH}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
                         saveEdit();
@@ -382,6 +536,10 @@ export default function NotesPanel() {
                       }
                     }}
                   />
+                  <div className={styles["char-count"]}>
+                    {editText.length}/{NOTE_MAX_LENGTH}
+                  </div>
+                  {editError && <div className={styles["note-error"]}>{editError}</div>}
                   <div className={styles["edit-actions"]}>
                     <button className={styles.cancel} onClick={cancelEdit}>
                       Cancel
