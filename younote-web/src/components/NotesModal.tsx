@@ -1,20 +1,20 @@
 type NoteItem = {
   id: string;
   profile_id?: string;
-  video_id?: string; // This remains the UUID
+  video_id?: string;
   content: string;
   created_at?: string;
   updated_at?: string;
   is_private?: boolean;
   timestamp_seconds?: number;
-  videos?: { youtube_video_id: string }; // <-- Add the joined table data
+  videos?: { youtube_video_id: string };
 };
 
 type NotesModalProps = {
   isOpen: boolean;
   loading: boolean;
   notes: NoteItem[];
-  videoId: string | null; // <-- Add this prop
+  videoId: string | null;
   onClose: () => void;
 };
 
