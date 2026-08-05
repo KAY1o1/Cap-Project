@@ -474,6 +474,14 @@ export default function NotesPanel() {
         {noteError && <div className={styles["note-error"]}>{noteError}</div>}
         {/* END FILTER */}
 
+        {/* CHAR LIMIT: live character counter for this textarea */}
+        <div className={styles["char-count"]}>{note.length}/{NOTE_MAX_LENGTH}</div>
+        {/* END CHAR LIMIT */}
+
+        {/* FILTER: hateful speech */}
+        {noteError && <div className={styles["note-error"]}>{noteError}</div>}
+        {/* END FILTER */}
+
         {showControls && (
           <div className={styles["hidden-buttons"]}>
             <label className={styles.switch} onMouseDown={(e) => e.preventDefault()}>

@@ -108,11 +108,7 @@ export async function deleteNote(id: string): Promise<void> {
   if (error) console.error("[YouNote] deleteNote failed:", error);
 }
 
-<<<<<<< HEAD
-// Re-insert a previously-deleted note with its original id (used by undo/redo).
-=======
 // UNDO/REDO: re-insert a previously-deleted note with its original id.
->>>>>>> 80045aceb4b7812142d8616bd311a01dc4e92cf6
 export async function restoreNote(note: Note, videoDbId: string): Promise<void> {
   const { error } = await supabase.from("notes").insert({
     id: note.id,
@@ -125,8 +121,6 @@ export async function restoreNote(note: Note, videoDbId: string): Promise<void> 
 
   if (error) console.error("[YouNote] restoreNote failed:", error);
 }
-<<<<<<< HEAD
-=======
 
 
 ///////
@@ -201,4 +195,3 @@ export async function getRecentVideos(
 
   return Array.from(byVideo.values()).slice(0, limit);
 }
->>>>>>> 80045aceb4b7812142d8616bd311a01dc4e92cf6

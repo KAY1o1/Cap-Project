@@ -9,8 +9,6 @@ const matcher = new RegExpMatcher({
 export function containsHatefulLanguage(text: string): boolean {
   return matcher.hasMatch(text);
 }
-<<<<<<< HEAD
+
 // END FILTER
-=======
-// END FILTER
->>>>>>> 80045aceb4b7812142d8616bd311a01dc4e92cf6
+
