@@ -113,6 +113,28 @@ export default function NotesPanel() {
   // ===== END SUE'S CONTRIBUTION =====
 
   // ===== NBAULIB'S CONTRIBUTION: rating UI state =====
+  const [hoverRating, setHoverRating] = useState<number | null>(null);
+
+  function PencilIcon({ filled }: { filled: boolean }) {
+    return filled ? (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path
+          d="M3.14645 17.1036C3.05268 17.1973 3 17.3245 3 17.4571V20.5C3 20.7761 3.22386 21 3.5 21H6.54289C6.6755 21 6.80268 20.9473 6.89645 20.8536L17.81 9.94L14.06 6.19L3.14645 17.1036ZM20.71 7.04C21.1 6.65 21.1 6.02 20.71 5.63L18.37 3.29C17.98 2.9 17.35 2.9 16.96 3.29L15.13 5.12L18.88 8.87L20.71 7.04Z"
+          fill="#F6EA7F"
+        />
+      </svg>
+    ) : (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path
+          d="M3 17.25V21H6.75L17.81 9.94L14.06 6.19L3 17.25ZM20.71 7.04C21.1 6.65 21.1 6.02 20.71 5.63L18.37 3.29C17.98 2.9 17.35 2.9 16.96 3.29L15.13 5.12L18.88 8.87L20.71 7.04Z"
+          stroke="#3a3a3a"
+          strokeWidth="1.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    );
+  }
   // RATING
   const [showRating, setShowRating] = useState(false);
   const [rated, setRated] = useState(false);
@@ -473,38 +495,35 @@ export default function NotesPanel() {
       </div>
 
       {/* ===== NBAULIB'S CONTRIBUTION: rating UI ===== */}
-      {showRating && (
-        <div className={styles.rating}>
-          <p>What would rate this video?</p>
-
-          <div className={styles.stars}>
+      <div className={styles.rating}>
+        {showRating && (
+          <div className={styles.stars} onMouseLeave={() => setHoverRating(null)}>
             {[1, 2, 3, 4, 5].map((star) => (
               <button
                 key={star}
                 className={styles.star}
-                onClick={() =>
-                  handleRating(star)
-                }>
-                {rating && star <= rating
-                  ? "✏️"
-                  : "⚪️"}
+                onClick={() => handleRating(star)}
+                onMouseEnter={() => setHoverRating(star)}
+                aria-label={`Rate ${star} star${star > 1 ? "s" : ""}`}
+              >
+                <PencilIcon filled={star <= (hoverRating ?? rating ?? 0)} />
               </button>
             ))}
           </div>
-        </div>
-      )}
+        )}
 
-
-      {rating && !showRating && (
-        <button
-          className={styles.savedRating}
-          onClick={() =>
-            setShowRating(true)
-          }
-        >
-          {"✏️".repeat(rating)}
-        </button>
-      )}
+        {rating && !showRating && (
+          <button
+            className={styles.savedRating}
+            onClick={() => setShowRating(true)}
+            aria-label={`Edit rating, currently ${rating} out of 5`}
+          >
+            {[1, 2, 3, 4, 5].map((star) => (
+              <PencilIcon key={star} filled={star <= rating} />
+            ))}
+          </button>
+        )}
+      </div>
       {/* ===== END NBAULIB'S CONTRIBUTION ===== */}
 
       {/* ===== SUE'S CONTRIBUTION: notes list rendering (nbaulib's eye-icon UI is nested inside per-note, see below) ===== */}

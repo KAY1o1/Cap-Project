@@ -321,30 +321,33 @@
 
 /* RATING */
 .rating {
+  display: flex;
   justify-content: center;
-  text-align: center;
-  margin: 12px 0;
-  padding: 12px;
-  border-radius: 8px;
-  background: var(--bg);
 }
 
+/* prevents bottom space from appearing? */
 .stars {
   display: flex;
   justify-content: center;
-  gap: 2px;
-  color: var(--text-primary);
 }
 
 .star {
+  width: 24px;
+  height: 24px;
+  padding: 0;
   border: none;
   background: transparent;
   cursor: pointer;
-  font-size: 24px;
+}
+
+.star svg {
+  display: block; /* removes inline-svg baseline whitespace */
 }
 
 .savedRating {
+  display: inline-flex;
   border: none;
   background: transparent;
   cursor: pointer;
+  padding: 0;
 }
