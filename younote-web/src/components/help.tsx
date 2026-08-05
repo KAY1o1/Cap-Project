@@ -1,4 +1,3 @@
-
 type render<T> = {
     title: string;
     subtitle: string;
