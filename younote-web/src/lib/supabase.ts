@@ -10,7 +10,7 @@ const storage = {
 };
 
 export const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_KEY,
+  import.meta.env.WXT_SUPABASE_URL as string,
+  import.meta.env.WXT_SUPABASE_KEY as string,
   { auth: { flowType: "pkce", detectSessionInUrl: false, storage } }
 );
