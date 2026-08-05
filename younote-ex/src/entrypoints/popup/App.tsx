@@ -1,35 +1,45 @@
-import { useState } from "react";
-import "./App.css";
+import { useEffect, useState } from "react";
+import "./style.css";
 import { login, logout, useSession } from "../../lib/auth"; // Google OAuth
-import { supabase } from "../../lib/supabase"; 
+import {
+  getCurrentUserId,
+  getUserStats,
+  getRecentVideos,
+  type UserStats,
+  type RecentVideo,
+} from "../../lib/notes";
 
-const numVideos = 12;
-const numNotes = 50;
+function formatDate(ms: number): string {
+  return new Date(ms).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
+}
 
 function App() {
   const [count, setCount] = useState(0);
   const email = useSession(); // Google OAuth
   const [enabled, setEnabled] = useState(true);
 
+  const [stats, setStats] = useState<UserStats>({
+    videosNoted: 0,
+    notesSaved: 0,
+  });
+  const [recentVideos, setRecentVideos] = useState<RecentVideo[]>([]);
 
-  const handleViewAllNotes = async () => {
-  const { data: { session } } = await supabase.auth.getSession();
-  
-  if (session) {
-    // Grab the tokens from the extension's active session
-    const accessToken = session.access_token;
-    const refreshToken = session.refresh_token;
-    
-    // Build the URL pointing to your website with tokens attached
-    const websiteUrl = `http://localhost:5173/?access_token=${accessToken}&refresh_token=${refreshToken}`;
-    
-    // Open the website tab
-    chrome.tabs.create({ url: websiteUrl });
-  } else {
-    alert("Please log in to the extension first!");
-  }
-};
+  useEffect(() => {
+    if (!email) {
+      setStats({ videosNoted: 0, notesSaved: 0 });
+      setRecentVideos([]);
+      return;
+    }
 
+    getCurrentUserId().then((userId) => {
+      if (!userId) return;
+      getUserStats(userId).then(setStats);
+      getRecentVideos(userId).then(setRecentVideos);
+    });
+  }, [email]);
 
   // Google OAuth: show login when signed out
   if (!email) {
@@ -47,54 +57,66 @@ function App() {
 
   return (
     <div className="popup">
-      <h1 className="title">YouNote</h1>
+      <h1>YouNote</h1>
 
-      <button
-        className="toggle-row"
-        onClick={() => setEnabled((prev) => !prev)}
-        aria-pressed={enabled}
-      >
-        <span className={`toggle-dot ${enabled ? "toggle-dot--on" : ""}`} />
-        <span className="toggle-label">
-          {enabled ? "Extension On" : "Extension Off"}
-        </span>
-      </button>
+      <div className="stat-card">
+        <div className="stat">
+          <span className="number">{stats.videosNoted}</span>
+          <span className="label">Videos Noted</span>
+        </div>
+        <div className="stat">
+          <span className="number">{stats.notesSaved}</span>
+          <span className="label">Notes Saved</span>
+        </div>
+      </div>
 
-      {enabled && (
-        <>
-          <div className="stats-card">
-            <div className="stat">
-              <span className="stat-number">{numVideos}</span>
-              <span className="stat-label">Videos Noted</span>
-            </div>
-            <div className="stat">
-              <span className="stat-number">{numNotes}</span>
-              <span className="stat-label">Notes Saved</span>
-            </div>
+      {recentVideos.length > 0 && (
+        <div>
+          <div className="recent-list">
+            <h3>Recent</h3>
+            {/* 2 videos */}
+            {recentVideos.slice(0, 2).map((video) => (
+              // links to video
+              <a
+                key={video.videoId}
+                className="recent"
+                href={`https://www.youtube.com/watch?v=${video.youtubeVideoId}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <img
+                  className="recent-thumbnail"
+                  src={`https://img.youtube.com/vi/${video.youtubeVideoId}/mqdefault.jpg`}
+                  alt={video.title}
+                />
+
+                <div className="recent-content">
+                  <span className="recent-title">{video.title}</span>
+                  <p className="recent-channel">{video.creator}</p>
+
+                  <div className="recent-meta">
+                    <span>{formatDate(video.lastNoteAt)}</span>
+                    <span>•</span>
+                    <span>
+                      {video.noteCount} {video.noteCount === 1 ? "note" : "notes"}
+                    </span>
+                  </div>
+                </div>
+              </a>
+            ))}
           </div>
-
-          {/* Links to Website */}
-          <a
-            href="/notes.html"
-            target="_blank"
-            rel="noreferrer"
-            className="see-all-btn"
-          >
-            See All Notes
-          </a>
-
-          <div className="links">
-            <a href="#" className="link">
-              Bugs?
-            </a>
-            <a href="#" className="link">
-              FAQ
-            </a>
-          </div>
-        </>
+        </div>
       )}
 
-      {/* Google OAuth: sign out */}
+      {/* Links to Website */}
+      <a
+        href="/notes.html"
+        target="_blank"
+        rel="noreferrer"
+        className="see-all-btn"
+      >
+        See All Notes
+      </a>
       <p className="signin-copy">
         Signed in as {email} <br></br>
         <a onClick={logout} className="signout-link">

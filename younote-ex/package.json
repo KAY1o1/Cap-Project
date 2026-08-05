@@ -2,9 +2,7 @@
   "name": "YouNote",
   "description": "manifest.json description",
   "private": true,
-
   "version": "0.0.1",
-
   "type": "module",
   "scripts": {
     "dev": "wxt",
@@ -13,11 +11,13 @@
     "build:firefox": "wxt build -b firefox",
     "zip": "wxt zip",
     "zip:firefox": "wxt zip -b firefox",
+    "test": "vitest run",
     "compile": "tsc --noEmit",
     "postinstall": "wxt prepare"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.0",
+    "obscenity": "^0.4.6",
     "react": "^19.2.4",
     "react-dom": "^19.2.4"
   },
@@ -27,6 +27,7 @@
     "@types/react-dom": "^19.2.3",
     "@wxt-dev/module-react": "^1.1.5",
     "typescript": "^5.9.3",
+    "vitest": "^3.2.7",
     "wxt": "^0.20.27"
   }
 }

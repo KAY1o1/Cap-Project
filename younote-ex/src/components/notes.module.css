@@ -31,6 +31,56 @@
   color: var(--text-primary);
 }
 
+/* HEADER ROW (TITLE + UNDO/REDO) */
+.title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.history-buttons {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.history-button {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-size: 14px;
+  width: 26px;
+  height: 26px;
+  cursor: pointer;
+}
+
+.history-button:hover:not(:disabled) {
+  background: var(--btn-bg);
+  color: var(--text-primary);
+}
+
+.history-button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* CHAR COUNT + VALIDATION */
+.char-count {
+  font-family: var(--font-main);
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: right;
+  margin-top: 4px;
+}
+
+.note-error {
+  font-family: var(--font-main);
+  font-size: 12px;
+  color: #ff6b6b;
+  margin-top: 4px;
+}
+
 /* INPUT TEXT AREA */
 .textarea {
   width: 100%;
@@ -271,30 +321,33 @@
 
 /* RATING */
 .rating {
+  display: flex;
   justify-content: center;
-  text-align: center;
-  margin: 12px 0;
-  padding: 12px;
-  border-radius: 8px;
-  background: var(--bg);
 }
 
+/* prevents bottom space from appearing? */
 .stars {
   display: flex;
   justify-content: center;
-  gap: 2px;
-  color: var(--text-primary);
 }
 
 .star {
+  width: 24px;
+  height: 24px;
+  padding: 0;
   border: none;
   background: transparent;
   cursor: pointer;
-  font-size: 24px;
+}
+
+.star svg {
+  display: block; /* removes inline-svg baseline whitespace */
 }
 
 .savedRating {
+  display: inline-flex;
   border: none;
   background: transparent;
   cursor: pointer;
+  padding: 0;
 }

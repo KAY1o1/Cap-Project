@@ -6,28 +6,32 @@ export default defineContentScript({
   matches: ["*://*.youtube.com/*"], // before had to manually reload page.
 
   main() {
-    const injectInput = () => {
-      if (document.getElementById("yt-reflection-input")) return;
+    const container = document.createElement("div");
+    container.id = "yt-reflection-input";
+    createRoot(container).render(<Notes />);
 
+    const injectPanel = () => {
+      // check if rec video sidebar visible
       const sidebar = document.querySelector("#secondary-inner");
-      if (!sidebar) return;
+      const visible = sidebar && sidebar.getBoundingClientRect().width > 0;
+      
+      const target = visible ? sidebar : document.querySelector("#below");
 
-      const container = document.createElement("div");
-      container.id = "yt-reflection-input";
-
-      sidebar.prepend(container);
-
-      const root = createRoot(container);
-      root.render(<Notes />);
+      // move panel if needed
+      if (target && container.parentElement !== target) {
+        target.prepend(container);
+      }
     };
 
-    const observer = new MutationObserver(injectInput);
-
-    observer.observe(document.body, {
+    // re-run on new video (SPA)
+    new MutationObserver(injectPanel).observe(document.body, {
       childList: true,
       subtree: true,
     });
 
-    injectInput();
+    // back-up
+    window.addEventListener("resize", injectPanel);
+
+    injectPanel();
   },
 });

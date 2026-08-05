@@ -5,6 +5,8 @@ import VideoCard from "../components/VideoCard";
 import VideoSearchBar from "../components/VideoSearchBar";
 import { useYouTubeVideos } from "../hooks/useYouTubeVideos";
 import "../styles/Notes.css";
+// Added Supabase import
+import { supabase } from "../lib/supabase";
 
 type YouTubeVideo = {
   id: string | { videoId: string };
@@ -39,7 +41,7 @@ type NoteItem = {
   updated_at?: string;
   is_private?: boolean;
   timestamp_seconds?: number;
-  videos?: { youtube_video_id: string }; // <-- Updated column name here
+  videos?: { youtube_video_id: string };
 };
 
 const tags: Option[] = [
@@ -77,7 +79,6 @@ export default function Notes() {
     if (typeof video.id === "string") {
       return video.id;
     }
-
     return video.id.videoId;
   };
 
@@ -104,37 +105,40 @@ export default function Notes() {
     setLoading(true);
 
     try {
-      const supabaseKey = import.meta.env.VITE_SUPABASE_KEY;
-      if (!supabaseKey) {
-        console.error("[Notes] Missing Supabase Key");
-        setNotes([]);
-        return;
-      }
-
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/notes?select=id,content,created_at,video_id,is_private,videos!inner(youtube_video_id)&videos.youtube_video_id=eq.${videoId}`,
-        {
-          headers: {
-            apikey: supabaseKey,
-            Authorization: `Bearer ${supabaseKey}`,
-          },
-        },
+      //Check if Supabase client knows we are logged in
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      console.log(
+        "[Notes Debug] Current Session:",
+        session ? "Logged In" : "NOT Logged In",
       );
 
-      // --- NEW ERROR LOGGING LOGIC ---
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`[Notes] Supabase 400 Error Body:`, errorText);
-        throw new Error(
-          `Failed to fetch notes: ${response.status} ${response.statusText}`,
-        );
-      }
-      // -------------------------------
+      //Check if the video exists in the videos table
+      const { data: videoData } = await supabase
+        .from("videos")
+        .select("*")
+        .eq("youtube_video_id", videoId);
+      console.log("[Notes Debug] Video in DB?", videoData);
 
-      const data = (await response.json()) as NoteItem[];
+      //Fetch the notes using the Supabase Client (handles auth automatically!)
+      const { data, error } = await supabase
+        .from("notes")
+        .select(
+          "id, content, created_at, video_id, is_private, videos!inner(youtube_video_id)",
+        )
+        .eq("videos.youtube_video_id", videoId);
+
+      if (error) {
+        console.error(`[Notes] Supabase Fetch Error:`, error.message);
+        throw error;
+      }
+
       console.log("[Notes] Raw data returned from Supabase:", data);
 
-      setNotes(data);
+      // Update state with our returned notes
+      // Force TypeScript to map the Supabase response to your NoteItem type
+      setNotes((data as unknown as NoteItem[]) || []);
     } catch (error) {
       console.error("[Notes] Error fetching notes:", error);
       setNotes([]);
@@ -155,26 +159,8 @@ export default function Notes() {
 
   // --- Effects ---
   useEffect(() => {
-    // When the search query changes, fetch fresh search results and notes.
-    const fetchContent = async () => {
-      try {
-        setLoading(true);
-
-        const supabaseKey = import.meta.env.VITE_SUPABASE_KEY;
-        if (!supabaseKey) {
-          setNotes([]);
-          return;
-        }
-
-        setNotes([]);
-      } catch (error) {
-        setNotes([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    void fetchContent();
+    // When the search query changes, reset notes array
+    setNotes([]);
   }, [searchQuery]);
 
   return (
@@ -237,7 +223,7 @@ export default function Notes() {
         isOpen={Boolean(selectedVideoId)}
         loading={loading}
         notes={notes}
-        videoId={selectedVideoId} // <-- Pass the selected video ID here
+        videoId={selectedVideoId}
         onClose={handleCloseNotes}
       />
     </div>

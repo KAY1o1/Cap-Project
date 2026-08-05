@@ -5,6 +5,8 @@ import { supabase } from '../lib/supabase';
 import { renderSection } from '../components/help';
 
 
+
+
 type VideoItem = {
     id: string;
     title: string;
@@ -12,6 +14,7 @@ type VideoItem = {
     creator?: string;
     created_at: string;
 };
+
 
 type RecentItem = {
     id: string;
@@ -23,11 +26,13 @@ type RecentItem = {
     video?: VideoItem[] | VideoItem;
 };
 
+
 type TrendItem = {
     id: string;
     title: string;
     youtube_video_id: string;
 };
+
 
 type RatingItem = {
     profile_id: string;
@@ -37,9 +42,11 @@ type RatingItem = {
     video?: VideoItem[] | VideoItem;
 };
 
+
 type HomePageP = {
     setPage: (page: 'home' | 'notes') => void;
 };
+
 
 export default function HomePage({ setPage }: HomePageP) {
     const [activities, setActivities] = useState<RecentItem[]>([]);
@@ -48,6 +55,7 @@ export default function HomePage({ setPage }: HomePageP) {
     const [loading, setLoading] = useState(true);
     const [hasUser, setHasUser] = useState(false);
 
+
     const SeeAll = (type: string) => {
         if (type === 'activity' || type === 'trend' || type === 'suggest') {
             setPage('notes');
@@ -55,16 +63,22 @@ export default function HomePage({ setPage }: HomePageP) {
     };
 
 
+
+
     const ItemClick = (id: string) => {
         console.log(`Item: ${id}`);
     };
 
+
     useEffect(() => {
         let isMounted = true;
+
 
         const fetchContent = async () => {
             try {
                 setLoading(true);
+
+
 
 
                 const { data: { user } } = await supabase.auth.getUser();
@@ -76,7 +90,10 @@ export default function HomePage({ setPage }: HomePageP) {
                     return;
                 }
 
+
                 if (isMounted) setHasUser(true);
+
+
 
 
                 const [activity, trend, rating] = await Promise.all([
@@ -87,10 +104,12 @@ export default function HomePage({ setPage }: HomePageP) {
                         .order("created_at", { ascending: false })
                         .limit(4),
 
+
                     supabase
                         .from("videos")
                         .select("id, title, youtube_video_id")
                         .limit(5),
+
 
                     supabase
                         .from("video_ratings")
@@ -100,10 +119,11 @@ export default function HomePage({ setPage }: HomePageP) {
                         .limit(4),
                 ]);
 
+
                 if (isMounted) {
                     setActivities((activity.data as RecentItem[]) || []);
                     setTrends((trend.data as TrendItem[]) || []);
-                    setRatings((rating.data as unknown as RatingItem[]) || []);
+                    setRatings((rating.data as RatingItem[]) || []);
                 }
             } catch (error) {
                 console.error("Error loading dashboard metrics:", error);
@@ -117,11 +137,14 @@ export default function HomePage({ setPage }: HomePageP) {
             }
         };
 
+
         fetchContent();
+
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
             fetchContent();
         });
+
 
         return () => {
             isMounted = false;
@@ -129,18 +152,23 @@ export default function HomePage({ setPage }: HomePageP) {
         };
     }, []);
 
+
     const getThumb = (videoWrapper: any) => {
         if (!videoWrapper) return Images.placeholder;
+
 
         const actualVideo = videoWrapper.youtube_video_id ? videoWrapper
             : (Array.isArray(videoWrapper) ? videoWrapper[0] : videoWrapper);
 
+
         const videoId = actualVideo?.youtube_video_id;
+
 
         return videoId
             ? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`
             : Images.placeholder;
     };
+
 
     if (loading) {
         return (
@@ -151,6 +179,8 @@ export default function HomePage({ setPage }: HomePageP) {
     }
 
 
+
+
     if (!hasUser) {
         return (
             <div className='home-container' style={{ textAlign: 'center', paddingTop: '60px' }}>
@@ -159,12 +189,15 @@ export default function HomePage({ setPage }: HomePageP) {
         );
     }
 
+
     return (
         <div className="home-container">
             <h1 id='dashboard-title'>Notes Dashboard</h1>
             <hr className='note-dash' />
 
+
             <div id="dashboard-box">
+
 
                 {/* Recent Activity Section */}
                 {renderSection({
@@ -178,44 +211,58 @@ export default function HomePage({ setPage }: HomePageP) {
                     placeholderImage: Images.placeholder,
                     renderItem: (item) => {
 
+
                         let videoData: VideoItem | null = null;
                         if (item.video) {
                             videoData = Array.isArray(item.video) ? item.video[0] : item.video;
                         }
 
+
                         const titleText = videoData?.title || "Title";
                         const creatorText = videoData?.creator || "Creator";
 
+
                         const formatVideoTimestamp = (totalSeconds: number | undefined) => {
                             if (totalSeconds === undefined || totalSeconds === null) return null;
+
 
                             const hrs = Math.floor(totalSeconds / 3600);
                             const mins = Math.floor((totalSeconds % 3600) / 60);
                             const secs = Math.floor(totalSeconds % 60);
 
+
                             const paddedSecs = secs.toString().padStart(2, '0');
+
 
                             if (hrs > 0) {
                                 const paddedMins = mins.toString().padStart(2, '0');
                                 return `${hrs}:${paddedMins}:${paddedSecs}`;
                             }
 
+
                             return `${mins}:${paddedSecs}`;
                         };
 
+
                         const videoTimeMarker = formatVideoTimestamp(item.timestamp_seconds);
 
+
                         return (
+
 
                             <div key={item.id} className='act-box' onClick={() => ItemClick(item.video_id)}>
                                 <div className="act-details">
 
+
                                     <h5 className="act-video-title" style={{ fontSize: '11px' }}>{titleText}</h5>
                                     <p className="act-video-creator" style={{ fontSize: '10px' }}>by {creatorText}</p>
 
+
                                     <hr className='dash-ra' />
 
+
                                     <p className="act-content" style={{ fontSize: '12px' }}>"{item.content}"</p>
+
 
                                     {videoTimeMarker && <span className="act-video-time" style={{ fontSize: '11px' }}> <strong>{videoTimeMarker}</strong> </span>}
                                 </div>
@@ -224,11 +271,14 @@ export default function HomePage({ setPage }: HomePageP) {
                                 </div>
                             </div>
 
+
                         );
                     }
                 })}
 
+
                 <hr className='dash-line-end' />
+
 
                 {/* Trending Section */}
                 {renderSection({
@@ -241,8 +291,8 @@ export default function HomePage({ setPage }: HomePageP) {
                     onItemClick: ItemClick,
                     placeholderImage: Images.placeholder,
                     renderItem: (item) => (
-                        <a 
-                        key={item.id} 
+                        <a
+                        key={item.id}
                         href={`https://www.youtube.com/watch?v=${item.youtube_video_id}`}
                         style={{ textDecoration: 'none', color: 'inherit', textDecorationLine: 'none' }}
                         >
@@ -254,7 +304,9 @@ export default function HomePage({ setPage }: HomePageP) {
                     )
                 })}
 
+
                 <hr className='dash-line-end' />
+
 
                 {/* Ratings Section */}
                 {renderSection({
@@ -268,23 +320,29 @@ export default function HomePage({ setPage }: HomePageP) {
                     placeholderImage: Images.placeholder,
                     renderItem: (item) => {
 
+
                         let videoData: VideoItem | null = null;
                         if (item.video) {
                             videoData = Array.isArray(item.video) ? item.video[0] : item.video;
                         }
 
+
                         const titleText = videoData?.title || "Title";
                         const creatorText = videoData?.creator || "Creator";
 
+
                         return (
                             <div key={`${item.profile_id}-${item.video_id}`} className='sug-box' onClick={() => ItemClick(item.video_id)}>
+
 
                                 <div className="act-details">
                                     <h5 className="sug-video-title" style={{ fontSize: '11px' }}>{titleText}</h5>
                                     <p className="sug-video-creator" style={{ fontSize: '10px' }}>by {creatorText}</p>
 
+
                                     <p>Rating: {item.rating}/5 {"✏️".repeat(Math.max(0, Math.min(5, Math.floor(item.rating))))}</p>
                                 </div>
+
 
                                 <div className="sug-thumb-container">
                                     <div><img src={getThumb(item.video)} alt="thumbnail" /></div>
@@ -297,3 +355,4 @@ export default function HomePage({ setPage }: HomePageP) {
         </div >
     );
 }
+

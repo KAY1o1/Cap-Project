@@ -8,7 +8,7 @@ import { ensureVideo } from "../lib/video";
 // CALLING BACKEND: rating
 import { fetchRating, saveRatingToSupabase } from "../lib/ratings";
 // CALLING BACKEND: notes
-import { fetchNotes, createNote, updateNote, deleteNote, getCurrentUserId } from "../lib/notes";
+import { fetchNotes, createNote, updateNote, deleteNote, restoreNote, getCurrentUserId } from "../lib/notes";
 // END CALLING BACKEND
 // FILTER: hateful speech
 import { containsHatefulLanguage } from "../lib/profanity";
@@ -20,9 +20,7 @@ type Note = {
   text: string;
   createdAt: number;
   videoTime: number;
-  // CALLING BACKEND: notes — renamed isPublic to isPrivate to keep it consistent with the Supabase `is_private` column.
   isPrivate: boolean;
-  // END CALLING BACKEND
   profileId: string;
 };
 
@@ -34,6 +32,7 @@ type NoteAction =
   | { type: "add"; note: Note }
   | { type: "delete"; note: Note }
   | { type: "edit"; id: string; before: string; after: string };
+// END UNDO/REDO
 
 // EXTRACT VID ID FROM URL
 function getVideoId(): string | null {
@@ -78,6 +77,7 @@ export default function NotesPanel() {
   }, [email]);
   // END CALLING BACKEND
 
+  // ===== SUE'S CONTRIBUTION: backend-calling state (video/profile/notes/undo-redo) =====
   // CALLING BACKEND: video — internal Supabase id for the current video (needed for ratings).
   const [videoDbId, setVideoDbId] = useState<string | null>(null);
   // END CALLING BACKEND
@@ -98,20 +98,49 @@ export default function NotesPanel() {
   const [showControls, setShowControls] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
+  // FILTER: hateful speech
   const [noteError, setNoteError] = useState<string | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
+  // END FILTER
 
   // UNDO/REDO: stacks of committed note actions for this video.
   const [history, setHistory] = useState<{ past: NoteAction[]; future: NoteAction[] }>({
     past: [],
     future: [],
   });
+  // END UNDO/REDO
+  // ===== END SUE'S CONTRIBUTION =====
 
+  // ===== NBAULIB'S CONTRIBUTION: rating UI state =====
+  const [hoverRating, setHoverRating] = useState<number | null>(null);
+
+  function PencilIcon({ filled }: { filled: boolean }) {
+    return filled ? (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path
+          d="M3.14645 17.1036C3.05268 17.1973 3 17.3245 3 17.4571V20.5C3 20.7761 3.22386 21 3.5 21H6.54289C6.6755 21 6.80268 20.9473 6.89645 20.8536L17.81 9.94L14.06 6.19L3.14645 17.1036ZM20.71 7.04C21.1 6.65 21.1 6.02 20.71 5.63L18.37 3.29C17.98 2.9 17.35 2.9 16.96 3.29L15.13 5.12L18.88 8.87L20.71 7.04Z"
+          fill="#F6EA7F"
+        />
+      </svg>
+    ) : (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path
+          d="M3 17.25V21H6.75L17.81 9.94L14.06 6.19L3 17.25ZM20.71 7.04C21.1 6.65 21.1 6.02 20.71 5.63L18.37 3.29C17.98 2.9 17.35 2.9 16.96 3.29L15.13 5.12L18.88 8.87L20.71 7.04Z"
+          stroke="#3a3a3a"
+          strokeWidth="1.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    );
+  }
   // RATING
   const [showRating, setShowRating] = useState(false);
   const [rated, setRated] = useState(false);
   const [rating, setRating] = useState<number | null>(null);
+  // ===== END NBAULIB'S CONTRIBUTION =====
 
+  // ===== NBAULIB'S CONTRIBUTION =====
   // PROMPT RATING AT 75% OF VIDEO
   useEffect(() => {
     if (!videoId) return;
@@ -132,7 +161,9 @@ export default function NotesPanel() {
 
     return () => clearInterval(interval);
   }, [videoId, rated]);
+  // ===== END NBAULIB'S CONTRIBUTION =====
 
+  // ===== SUE'S CONTRIBUTION =====
   // UNDO/REDO: Ctrl/Cmd+Z to undo, Ctrl/Cmd+Shift+Z or Ctrl/Cmd+Y to redo.
   // Skipped while focus is in a textarea/input so native text-editing undo isn't hijacked.
   useEffect(() => {
@@ -154,8 +185,10 @@ export default function NotesPanel() {
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [videoDbId]);
+  // END UNDO/REDO
+  // ===== END SUE'S CONTRIBUTION =====
 
-  // SPA NAVIGATION LISTENER
+  // SPA NAVIGATION LISTENER (foundational, predates both features below)
   useEffect(() => {
     const handleNavigate = () => setVideoId(getVideoId());
     document.addEventListener("yt-navigate-finish", handleNavigate);
@@ -163,6 +196,9 @@ export default function NotesPanel() {
   }, []);
 
   // RESET NOTE ON NEW VIDEO
+  // NOTE: this effect is intentionally shared — Sue's notes fetch and nbaulib's rating
+  // fetch both depend on the same ensureVideo() call below, so they can't be split into
+  // separate effects without calling ensureVideo() (and writing to Supabase) twice per video.
   useEffect(() => {
     if (!videoId) {
       setNotes([]);
@@ -175,7 +211,7 @@ export default function NotesPanel() {
 
     setEditingId(null);
     setNote("");
-    setHistory({ past: [], future: [] });
+    setHistory({ past: [], future: [] }); // UNDO/REDO: reset per video
 
     // CALLING BACKEND: video — log this video into the Supabase `videos` table.
     const { title, creator } = getVideoMeta();
@@ -215,6 +251,7 @@ export default function NotesPanel() {
     return player ? player.currentTime : 0;
   };
 
+  // ===== SUE'S CONTRIBUTION: notes CRUD, undo/redo, char limit + filter checks =====
   // MUTATION HELPER
   const mutateNotes = (updater: (prev: Note[]) => Note[]) => {
     setNotes((prev) => updater(prev));
@@ -231,23 +268,23 @@ export default function NotesPanel() {
     if (action.type === "add") {
       if (direction === "undo") {
         mutateNotes((prev) => prev.filter((n) => n.id !== action.note.id));
-        deleteNote(action.note.id);
+        deleteNote(action.note.id); // CALLING BACKEND: notes — undo an add by deleting the note from Supabase.
       } else {
         mutateNotes((prev) => [...prev, action.note]);
-        if (videoDbId) restoreNote(action.note, videoDbId);
+        if (videoDbId) restoreNote(action.note, videoDbId); // CALLING BACKEND: notes — redo an add by re-inserting the note with its original id.
       }
     } else if (action.type === "delete") {
       if (direction === "undo") {
         mutateNotes((prev) => [...prev, action.note]);
-        if (videoDbId) restoreNote(action.note, videoDbId);
+        if (videoDbId) restoreNote(action.note, videoDbId); // CALLING BACKEND: notes — undo a delete by re-inserting the note with its original id.
       } else {
         mutateNotes((prev) => prev.filter((n) => n.id !== action.note.id));
-        deleteNote(action.note.id);
+        deleteNote(action.note.id); // CALLING BACKEND: notes — redo a delete by removing the note from Supabase again.
       }
     } else {
       const text = direction === "undo" ? action.before : action.after;
       mutateNotes((prev) => prev.map((n) => (n.id === action.id ? { ...n, text } : n)));
-      updateNote(action.id, text);
+      updateNote(action.id, text); // CALLING BACKEND: notes — sync the reverted/replayed text back to Supabase.
     }
   };
 
@@ -268,6 +305,7 @@ export default function NotesPanel() {
       return { past: [...h.past, action], future: h.future.slice(0, -1) };
     });
   };
+  // END UNDO/REDO
 
   const handleSubmit = async () => {
     const trimmed = note.trim();
@@ -292,17 +330,17 @@ export default function NotesPanel() {
     if (!newNote) return;
 
     mutateNotes((prev) => [...prev, newNote]);
-    pushAction({ type: "add", note: newNote });
+    pushAction({ type: "add", note: newNote }); // UNDO/REDO
     setNote("");
   };
 
   const handleDelete = (id: string) => {
-    const target = notes.find((n) => n.id === id);
+    const target = notes.find((n) => n.id === id); // UNDO/REDO
     mutateNotes((prev) => prev.filter((n) => n.id !== id));
     // CALLING BACKEND: notes — delete this note from Supabase.
     deleteNote(id);
     // END CALLING BACKEND
-    if (target) pushAction({ type: "delete", note: target });
+    if (target) pushAction({ type: "delete", note: target }); // UNDO/REDO
   };
 
   const startEdit = (id: string, text: string) => {
@@ -326,7 +364,7 @@ export default function NotesPanel() {
     }
     // END FILTER
 
-    const original = notes.find((n) => n.id === editingId);
+    const original = notes.find((n) => n.id === editingId); // UNDO/REDO
     mutateNotes((prev) =>
       prev.map((n) => (n.id === editingId ? { ...n, text: trimmed } : n))
     );
@@ -334,7 +372,7 @@ export default function NotesPanel() {
     updateNote(editingId, trimmed);
     // END CALLING BACKEND
     if (original && original.text !== trimmed) {
-      pushAction({ type: "edit", id: editingId, before: original.text, after: trimmed });
+      pushAction({ type: "edit", id: editingId, before: original.text, after: trimmed }); // UNDO/REDO
     }
     cancelEdit();
   };
@@ -344,7 +382,9 @@ export default function NotesPanel() {
     setEditText("");
     setEditError(null);
   };
+  // ===== END SUE'S CONTRIBUTION =====
 
+  // ===== NBAULIB'S CONTRIBUTION: rating trigger + timestamp seek =====
   const seekTo = (seconds: number) => {
     const player = document.querySelector("video");
     if (player) player.currentTime = seconds;
@@ -361,6 +401,7 @@ export default function NotesPanel() {
     if (videoDbId) saveRatingToSupabase(videoDbId, value);
     // END CALLING BACKEND
   };
+  // ===== END NBAULIB'S CONTRIBUTION =====
 
   // START OF UI
   if (!email) {
@@ -416,12 +457,22 @@ export default function NotesPanel() {
           }}
           placeholder="Add a note..."
           className={styles.textarea}
+          // CHAR LIMIT: enforce the 150-char cap on this textarea
           maxLength={NOTE_MAX_LENGTH}
+          // END CHAR LIMIT
         />
         <div className={styles["char-count"]}>
           {note.length}/{NOTE_MAX_LENGTH}
         </div>
         {noteError && <div className={styles["note-error"]}>{noteError}</div>}
+
+        {/* CHAR LIMIT: live character counter for this textarea */}
+        <div className={styles["char-count"]}>{note.length}/{NOTE_MAX_LENGTH}</div>
+        {/* END CHAR LIMIT */}
+
+        {/* FILTER: hateful speech */}
+        {noteError && <div className={styles["note-error"]}>{noteError}</div>}
+        {/* END FILTER */}
 
         {showControls && (
           <div className={styles["hidden-buttons"]}>
@@ -446,44 +497,45 @@ export default function NotesPanel() {
         )}
       </div>
 
-      {showRating && (
-        <div className={styles.rating}>
-          <p>What would rate this video?</p>
-
-          <div className={styles.stars}>
+      {/* ===== NBAULIB'S CONTRIBUTION: rating UI ===== */}
+      <div className={styles.rating}>
+        {showRating && (
+          <div className={styles.stars} onMouseLeave={() => setHoverRating(null)}>
             {[1, 2, 3, 4, 5].map((star) => (
               <button
                 key={star}
                 className={styles.star}
-                onClick={() =>
-                  handleRating(star)
-                }>
-                {rating && star <= rating
-                  ? "✏️"
-                  : "⚪️"}
+                onClick={() => handleRating(star)}
+                onMouseEnter={() => setHoverRating(star)}
+                aria-label={`Rate ${star} star${star > 1 ? "s" : ""}`}
+              >
+                <PencilIcon filled={star <= (hoverRating ?? rating ?? 0)} />
               </button>
             ))}
           </div>
-        </div>
-      )}
+        )}
 
+        {rating && !showRating && (
+          <button
+            className={styles.savedRating}
+            onClick={() => setShowRating(true)}
+            aria-label={`Edit rating, currently ${rating} out of 5`}
+          >
+            {[1, 2, 3, 4, 5].map((star) => (
+              <PencilIcon key={star} filled={star <= rating} />
+            ))}
+          </button>
+        )}
+      </div>
+      {/* ===== END NBAULIB'S CONTRIBUTION ===== */}
 
-      {rating && !showRating && (
-        <button
-          className={styles.savedRating}
-          onClick={() =>
-            setShowRating(true)
-          }
-        >
-          {"✏️".repeat(rating)}
-        </button>
-      )}
-
+      {/* ===== SUE'S CONTRIBUTION: notes list rendering (nbaulib's eye-icon UI is nested inside per-note, see below) ===== */}
       {sortedNotes.length > 0 && (
         <div className={styles.carousel}>
           {sortedNotes.map((n) => (
             <div key={n.id} className={styles.card}>
               <div className={styles.header}>
+                {/* NBAULIB'S CONTRIBUTION: eye-open/eye-closed privacy icons */}
                 <div className={styles["card-actions"]}>
                   {!n.isPrivate && <span className={styles.lock}>
                     {/* eye open */}
@@ -527,7 +579,9 @@ export default function NotesPanel() {
                       setEditError(null);
                     }}
                     autoFocus
+                    // CHAR LIMIT: enforce the 150-char cap on this textarea
                     maxLength={NOTE_MAX_LENGTH}
+                    // END CHAR LIMIT
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
                         saveEdit();
@@ -536,10 +590,12 @@ export default function NotesPanel() {
                       }
                     }}
                   />
-                  <div className={styles["char-count"]}>
-                    {editText.length}/{NOTE_MAX_LENGTH}
-                  </div>
+                  {/* CHAR LIMIT: live character counter for this textarea */}
+                  <div className={styles["char-count"]}>{editText.length}/{NOTE_MAX_LENGTH}</div>
+                  {/* END CHAR LIMIT */}
+                  {/* FILTER: hateful speech */}
                   {editError && <div className={styles["note-error"]}>{editError}</div>}
+                  {/* END FILTER */}
                   <div className={styles["edit-actions"]}>
                     <button className={styles.cancel} onClick={cancelEdit}>
                       Cancel
@@ -556,6 +612,7 @@ export default function NotesPanel() {
           ))}
         </div>
       )}
+      {/* ===== END SUE'S CONTRIBUTION ===== */}
     </div>
   );
 }
