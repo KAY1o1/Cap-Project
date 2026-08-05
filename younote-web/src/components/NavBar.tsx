@@ -47,9 +47,6 @@ const NavBar = ({ setPage, currentPage, UserUrl }: NavBarP) => {
                <button onClick={() => setPage('notes')} disabled={currentPage === 'notes'}>
                   Notes
                </button>
-               <button onClick={() => setPage('friends')} disabled={currentPage === 'friends'}>
-                  Friends
-               </button>
             </div>
 
             {/* --- AUTHENTICATION & PROFILE SECTION --- */}
