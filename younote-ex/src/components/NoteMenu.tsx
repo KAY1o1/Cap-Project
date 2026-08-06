@@ -8,9 +8,11 @@ type NoteMenuProps = {
 };
 
 export default function NoteMenu({ onEdit, onDelete }: NoteMenuProps) {
+  // check menu visibilty
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState({ top: 0, left: 0 });
 
+  // DOM
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -19,6 +21,7 @@ export default function NoteMenu({ onEdit, onDelete }: NoteMenuProps) {
     console.log(styles.carousel);
     console.log(document.querySelector(`.${styles.carousel}`));
 
+    // BUTTON BOUNDS
     const rect = buttonRef.current.getBoundingClientRect();
     console.log(rect);
 
@@ -92,6 +95,7 @@ export default function NoteMenu({ onEdit, onDelete }: NoteMenuProps) {
         </svg>
       </button>
 
+      {/* render portal */}
       {open &&
         createPortal(
           <div

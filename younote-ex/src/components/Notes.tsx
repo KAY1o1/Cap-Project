@@ -459,7 +459,7 @@ export default function NotesPanel() {
           className={styles.textarea}
           // CHAR LIMIT: enforce the 150-char cap on this textarea
           maxLength={NOTE_MAX_LENGTH}
-          // END CHAR LIMIT
+        // END CHAR LIMIT
         />
         <div className={styles["char-count"]}>
           {note.length}/{NOTE_MAX_LENGTH}
@@ -482,6 +482,7 @@ export default function NotesPanel() {
         {noteError && <div className={styles["note-error"]}>{noteError}</div>}
         {/* END FILTER */}
 
+        {/* hidden submit and privacy toggle button */}
         {showControls && (
           <div className={styles["hidden-buttons"]}>
             <label className={styles.switch} onMouseDown={(e) => e.preventDefault()}>
@@ -508,6 +509,7 @@ export default function NotesPanel() {
       {/* ===== NBAULIB'S CONTRIBUTION: rating UI ===== */}
       <div className={styles.rating}>
         {showRating && (
+          // rating editor
           <div className={styles.stars} onMouseLeave={() => setHoverRating(null)}>
             {[1, 2, 3, 4, 5].map((star) => (
               <button
@@ -524,6 +526,7 @@ export default function NotesPanel() {
         )}
 
         {rating && !showRating && (
+          // saved rating
           <button
             className={styles.savedRating}
             onClick={() => setShowRating(true)}
