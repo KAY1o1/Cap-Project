@@ -27,10 +27,9 @@ body {
   margin: 0;
 }
 
-h1 {
-  /* font-weight: 500; */
+.popup h1 {
   margin: 0;
-  font-size: 19px;
+  font-size: 22px;
   font-weight: 600;
 }
 
@@ -178,7 +177,7 @@ p {
   cursor: pointer;
 }
 
-/* a {
+a {
   font-weight: 500;
   color: #646cff;
   text-decoration: inherit;
