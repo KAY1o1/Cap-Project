@@ -1,6 +1,7 @@
 import { useState } from "react";
 import "./style.css";
 import { login, logout, useSession } from "../../lib/auth"; // Google OAuth
+import { supabase } from "../../lib/supabase"; 
 
 const numVideos = 12;
 const numNotes = 50;
@@ -8,6 +9,24 @@ const numNotes = 50;
 function App() {
   const email = useSession(); // Google OAuth
   const [enabled, setEnabled] = useState(true);
+
+  const handleViewAllNotesClick = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+
+    let targetUrl = "http://localhost:5173"; 
+
+    // If a session exists, attach the tokens to the end of the URL
+    if (session) {
+      targetUrl += `?access_token=${session.access_token}&refresh_token=${session.refresh_token}`;
+    }
+
+    // Open the new tab
+    if (typeof chrome !== 'undefined' && chrome.tabs) {
+      chrome.tabs.create({ url: targetUrl });
+    } else {
+      window.open(targetUrl, '_blank');
+    }
+  };
 
   // Google OAuth: show login when signed out
   if (!email) {
@@ -50,15 +69,13 @@ function App() {
             </div>
           </div>
 
-          {/* Links to Website */}
-          <a
-            href="/notes.html"
-            target="_blank"
-            rel="noreferrer"
+          {/* 👇 3. Replace the <a> tag with this button to trigger our new function */}
+          <button
+            onClick={handleViewAllNotesClick}
             className="see-all-btn"
           >
             See All Notes
-          </a>
+          </button>
 
           <div className="links">
             <a href="#" className="link">

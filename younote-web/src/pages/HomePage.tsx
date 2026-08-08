@@ -1,143 +1,299 @@
-// import React from 'react';
 import '../styles/HomePage.css';
 import { Images } from '../assets/images';
+import { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
+import { renderSection } from '../components/help';
 
-export default function HomePage(){
 
-    const SeeAll = (section: string) => {
-        console.log(`Opening all for ${section}`);
+type VideoItem = {
+    id: string;
+    title: string;
+    youtube_video_id: string;
+    creator?: string;
+    created_at: string;
+};
+
+type RecentItem = {
+    id: string;
+    profile_id: string;
+    video_id: string;
+    content: string;
+    created_at?: string;
+    timestamp_seconds?: number;
+    video?: VideoItem[] | VideoItem;
+};
+
+type TrendItem = {
+    id: string;
+    title: string;
+    youtube_video_id: string;
+};
+
+type RatingItem = {
+    profile_id: string;
+    video_id: string;
+    rating: number;
+    created_at?: string;
+    video?: VideoItem[] | VideoItem;
+};
+
+type HomePageP = {
+    setPage: (page: 'home' | 'notes') => void;
+};
+
+export default function HomePage({ setPage }: HomePageP) {
+    const [activities, setActivities] = useState<RecentItem[]>([]);
+    const [trends, setTrends] = useState<TrendItem[]>([]);
+    const [ratings, setRatings] = useState<RatingItem[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [hasUser, setHasUser] = useState(false);
+
+    const SeeAll = (type: string) => {
+        if (type === 'activity' || type === 'trend' || type === 'suggest') {
+            setPage('notes');
+        }
+    };
+
+
+    const ItemClick = (id: string) => {
+        console.log(`Item: ${id}`);
+    };
+
+    useEffect(() => {
+        let isMounted = true;
+
+        const fetchContent = async () => {
+            try {
+                setLoading(true);
+
+
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) {
+                    if (isMounted) {
+                        setHasUser(false);
+                        setLoading(false);
+                    }
+                    return;
+                }
+
+                if (isMounted) setHasUser(true);
+
+
+                const [activity, trend, rating] = await Promise.all([
+                    supabase
+                        .from("notes")
+                        .select(`id, profile_id, video_id, content, created_at, timestamp_seconds, video:videos!video_id(id, title, youtube_video_id, creator)`)
+                        .eq("profile_id", user.id)
+                        .order("created_at", { ascending: false })
+                        .limit(4),
+
+                    supabase
+                        .from("videos")
+                        .select("id, title, youtube_video_id")
+                        .limit(5),
+
+                    supabase
+                        .from("video_ratings")
+                        .select(`profile_id, video_id, rating, created_at, video:videos!video_id(id, title, youtube_video_id, creator)`)
+                        .eq("profile_id", user.id)
+                        .order("created_at", { ascending: false })
+                        .limit(4),
+                ]);
+
+                if (isMounted) {
+                    setActivities((activity.data as RecentItem[]) || []);
+                    setTrends((trend.data as TrendItem[]) || []);
+                    setRatings((rating.data as unknown as RatingItem[]) || []);
+                }
+            } catch (error) {
+                console.error("Error loading dashboard metrics:", error);
+                if (isMounted) {
+                    setActivities([]);
+                    setTrends([]);
+                    setRatings([]);
+                }
+            } finally {
+                if (isMounted) setLoading(false);
+            }
+        };
+
+        fetchContent();
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+            fetchContent();
+        });
+
+        return () => {
+            isMounted = false;
+            subscription.unsubscribe();
+        };
+    }, []);
+
+    const getThumb = (videoWrapper: any) => {
+        if (!videoWrapper) return Images.placeholder;
+
+        const actualVideo = videoWrapper.youtube_video_id ? videoWrapper
+            : (Array.isArray(videoWrapper) ? videoWrapper[0] : videoWrapper);
+
+        const videoId = actualVideo?.youtube_video_id;
+
+        return videoId
+            ? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`
+            : Images.placeholder;
+    };
+
+    if (loading) {
+        return (
+            <div className='home-container'>
+                <h3>Loading...</h3>
+            </div>
+        );
     }
 
-    const ItemClick = (detail: string) => {
-        console.log(`Opening item: ${detail}`);
+
+    if (!hasUser) {
+        return (
+            <div className='home-container' style={{ textAlign: 'center', paddingTop: '60px' }}>
+                <p>Sign into the extension and click <strong>"View All Notes"</strong> </p>
+            </div>
+        );
     }
 
-
-    return(
-        <div className="home-container"> 
+    return (
+        <div className="home-container">
             <h1 id='dashboard-title'>Notes Dashboard</h1>
-            <hr className='note-dash'/>
+            <hr className='note-dash' />
+
             <div id="dashboard-box">
 
-                {/* Friends' Activity */}
+                {/* Recent Activity Section */}
+                {renderSection({
+                    title: "Recent Activity",
+                    subtitle: "What you are currently watching & learning",
+                    typeKey: "activity",
+                    items: activities,
+                    emptyText: "No Notes...",
+                    onSeeAll: SeeAll,
+                    onItemClick: ItemClick,
+                    placeholderImage: Images.placeholder,
+                    renderItem: (item) => {
 
-                <div className="db-box">
-                    <div className="activity-text"> 
-                        <div className="sep">
-                            <h2 id='activity-subt'>Friends' Activity</h2>
-                            <p id='activity-note'> What your frineds are watching & learning</p>
-                        </div>
-                        
-                        <h3 id='expand-all' className='see-all-link' onClick={() => SeeAll('activity')}>See all → </h3>
-                        
-                    </div>
-                    
-                    <hr className='dash-line'/>
+                        let videoData: VideoItem | null = null;
+                        if (item.video) {
+                            videoData = Array.isArray(item.video) ? item.video[0] : item.video;
+                        }
 
-                    <div id="activity-box">
-                        <div className="act-box" onClick={() => ItemClick('activity-1')}>
-                            <p>Detail on the video... </p>
-                            <div><img src={Images.placeholder} alt="placeholder" /></div>
-                        </div>
-                        <div className="act-box" onClick={() => ItemClick('activity-2')}>
-                            <p>Detail on the video... </p>
-                            <div><img src={Images.placeholder} alt="placeholder" /></div>
-                        </div>
-                        <div className="act-box" onClick={() => ItemClick('activity-3')}>
-                            <p>Detail on the video... </p>
-                            <div><img src={Images.placeholder} alt="placeholder" /></div>
-                        </div>
-                        <div className="act-box"onClick={() => ItemClick('activity-4')}>
-                            <p>Detail on the video... </p>
-                            <div><img src={Images.placeholder} alt="placeholder" /></div>
-                        </div>
-                    </div>
-                </div>
+                        const titleText = videoData?.title || "Title";
+                        const creatorText = videoData?.creator || "Creator";
 
-                <hr className='dash-line-end'/>
+                        const formatVideoTimestamp = (totalSeconds: number | undefined) => {
+                            if (totalSeconds === undefined || totalSeconds === null) return null;
 
-                {/* Trending in your Network */}
+                            const hrs = Math.floor(totalSeconds / 3600);
+                            const mins = Math.floor((totalSeconds % 3600) / 60);
+                            const secs = Math.floor(totalSeconds % 60);
 
-                <div className="db-box">
-                     <div className="trend-text"> 
-                        <div className="sep">
-                            <h2 id='trend-subt'>Trending in Your Network</h2>
-                            <p id='trend-note'> Most liked by people you fellow this week</p>
-                        </div>
-                        <h3 id='tr-expand-all' className='see-all-link' onClick={() => SeeAll('trending')}>See all → </h3>
-                        
-                    </div>
+                            const paddedSecs = secs.toString().padStart(2, '0');
 
-                    <hr className='dash-line'/>
+                            if (hrs > 0) {
+                                const paddedMins = mins.toString().padStart(2, '0');
+                                return `${hrs}:${paddedMins}:${paddedSecs}`;
+                            }
 
+                            return `${mins}:${paddedSecs}`;
+                        };
 
-                    <div id="trend-box">
-                        <div className="tre-box" onClick={() => ItemClick('trend-1')}>
-                            <p>Detail on the video... </p>
-                            <div><img src={Images.placeholder} alt="placeholder" /></div>
-                        </div>
-                        <div className="tre-box" onClick={() => ItemClick('trend-2')}>
-                            <p>Detail on the video... </p>
-                            <div><img src={Images.placeholder} alt="placeholder" /></div>
-                        </div>
-                        <div className="tre-box" onClick={() => ItemClick('trend-3')}>
-                            <p>Detail on the video... </p>
-                            <div><img src={Images.placeholder} alt="placeholder" /></div>
-                        </div>
-                        <div className="tre-box" onClick={() => ItemClick('trend-4')}>
-                            <p>Detail on the video... </p>
-                            <div><img src={Images.placeholder} alt="placeholder" /></div>
-                        </div>
-                    </div>
+                        const videoTimeMarker = formatVideoTimestamp(item.timestamp_seconds);
 
+                        return (
 
-                </div>
+                            <div key={item.id} className='act-box' onClick={() => ItemClick(item.video_id)}>
+                                <div className="act-details">
 
-                <hr className='dash-line-end'/>
+                                    <h5 className="act-video-title" style={{ fontSize: '11px' }}>{titleText}</h5>
+                                    <p className="act-video-creator" style={{ fontSize: '10px' }}>by {creatorText}</p>
 
+                                    <hr className='dash-ra' />
 
-                {/* Suggested for you */}
+                                    <p className="act-content" style={{ fontSize: '12px' }}>"{item.content}"</p>
 
-                <div className="db-box">
-                    <div className="suggest-text"> 
-                        <div className="sep">
-                            <h2 id='suggest-subt'>Suggested for you</h2>
-                            <p id='suggest-note'> Based on your saved notes</p>
-                        </div>
-                        <h3 id='sug-expand-all' className='see-all-link' onClick={() => SeeAll('suggested')}>See all → </h3>
-                    </div>
+                                    {videoTimeMarker && <span className="act-video-time" style={{ fontSize: '11px' }}> <strong>{videoTimeMarker}</strong> </span>}
+                                </div>
+                                <div className="act-thumb-container">
+                                    <img src={getThumb(item.video)} alt="thumbnail" />
+                                </div>
+                            </div>
 
-                    <div id="suggest-box">
-                        <div className="sug-box" onClick={() => ItemClick('suggest-1')}>
-                            <p>Detail on the video... </p>
-                            <div><img src={Images.placeholder} alt="placeholder" /></div>
-                        </div>
-                        <div className="sug-box" onClick={() => ItemClick('suggest-2')}>
-                            <p>Detail on the video... </p>
-                            <div><img src={Images.placeholder} alt="placeholder" /></div>
-                        </div>
-                        <div className="sug-box" onClick={() => ItemClick('suggest-3')}>
-                            <p>Detail on the video... </p>
-                            <div><img src={Images.placeholder} alt="placeholder" /></div>
-                        </div>
-                        <div className="sug-box" onClick={() => ItemClick('suggest-4')}>
-                            <p>Detail on the video... </p>
-                            <div><img src={Images.placeholder} alt="placeholder" /></div>
-                        </div>
-                    </div>
+                        );
+                    }
+                })}
 
+                <hr className='dash-line-end' />
 
+                {/* Trending Section */}
+                {renderSection({
+                    title: "Trends",
+                    subtitle: "Take a look at what others watched",
+                    typeKey: "trend",
+                    items: trends,
+                    emptyText: "Nothing Trending at the moment",
+                    onSeeAll: SeeAll,
+                    onItemClick: ItemClick,
+                    placeholderImage: Images.placeholder,
+                    renderItem: (item) => (
+                        <a 
+                        key={item.id} 
+                        href={`https://www.youtube.com/watch?v=${item.youtube_video_id}`}
+                        style={{ textDecoration: 'none', color: 'inherit', textDecorationLine: 'none' }}
+                        >
+                            <div className='tre-box' onClick={() => ItemClick(item.id)}>
+                                <p>{item.title}</p>
+                                <div><img src={getThumb(item)} alt="trend snapshot" /></div>
+                            </div>
+                        </a>
+                    )
+                })}
 
-                </div>
+                <hr className='dash-line-end' />
 
+                {/* Ratings Section */}
+                {renderSection({
+                    title: "Your Ratings",
+                    subtitle: "Your ratings on various videos",
+                    typeKey: "suggest",
+                    items: ratings,
+                    emptyText: "No Rating",
+                    onSeeAll: SeeAll,
+                    onItemClick: ItemClick,
+                    placeholderImage: Images.placeholder,
+                    renderItem: (item) => {
+
+                        let videoData: VideoItem | null = null;
+                        if (item.video) {
+                            videoData = Array.isArray(item.video) ? item.video[0] : item.video;
+                        }
+
+                        const titleText = videoData?.title || "Title";
+                        const creatorText = videoData?.creator || "Creator";
+
+                        return (
+                            <div key={`${item.profile_id}-${item.video_id}`} className='sug-box' onClick={() => ItemClick(item.video_id)}>
+
+                                <div className="act-details">
+                                    <h5 className="sug-video-title" style={{ fontSize: '11px' }}>{titleText}</h5>
+                                    <p className="sug-video-creator" style={{ fontSize: '10px' }}>by {creatorText}</p>
+
+                                    <p>Rating: {item.rating}/5 {"✏️".repeat(Math.max(0, Math.min(5, Math.floor(item.rating))))}</p>
+                                </div>
+
+                                <div className="sug-thumb-container">
+                                    <div><img src={getThumb(item.video)} alt="thumbnail" /></div>
+                                </div>
+                            </div>
+                        )
+                    }
+                })}
             </div>
-        
-        
-        
-        
-        
-        
-        </div>
-
+        </div >
     );
 }
