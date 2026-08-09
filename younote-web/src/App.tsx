@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
-import {supabase} from './lib/supabase'
+import type { Session } from '@supabase/supabase-js'
+import { supabase } from './lib/supabase'
 import NavBar from './components/NavBar'
 import HomePage from './pages/HomePage'
 import Notes from './pages/Notes'
-// import Friends from './pages/FriendsList'
 
 function App() {
   const [currentPage, setCurrentPage] = useState<'home' | 'notes'>('home')
@@ -38,35 +38,40 @@ function App() {
     return () => window.removeEventListener("message", handleMessage);
   }, []);
 
-  // Listen for the auth token from the extension
   useEffect(() => {
-    const handleMessage = async (event: MessageEvent) => {
-      // Security check: Make sure we only accept messages from our own window
-      if (event.source !== window) return;
+  const syncSessionFromUrl = async () => {
 
-      if (event.data.type === "SYNC_SUPABASE_SESSION") {
-        console.log("Received session from extension! Logging in...");
-        
-        const { access_token, refresh_token } = event.data.payload;
+    const urlParams = new URLSearchParams(window.location.search);
+    const accessToken = urlParams.get('access_token');
+    const refreshToken = urlParams.get('refresh_token');
 
-        // Force the website's Supabase client to log in using the extension's tokens
-        const { error } = await supabase.auth.setSession({
-          access_token,
-          refresh_token,
-        });
+    if (accessToken && refreshToken) {
+     
+      await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken
+      });
 
-        if (error) {
-          console.error("Failed to sync session:", error.message);
-        } else {
-          console.log("Successfully synced auth state!");
-        }
-      }
-    };
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  };
 
-    window.addEventListener("message", handleMessage);
-    return () => window.removeEventListener("message", handleMessage);
-  }, []);
+  
+  syncSessionFromUrl().then(() => {
+   
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+  });
 
+  const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    setSession(session);
+  });
+
+  return () => subscription.unsubscribe();
+}, []);
+
+ 
   const Page = () => {
     switch(currentPage){
       case 'home':
@@ -80,7 +85,7 @@ function App() {
 
   return (
     <>
-      <NavBar setPage={setCurrentPage} currentPage={currentPage}/>
+      <NavBar setPage={setCurrentPage} currentPage={currentPage} session={session}/>
       <main className='main-content'>
         {Page()}
       </main>

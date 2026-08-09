@@ -8,6 +8,7 @@ import {
   type UserStats,
   type RecentVideo,
 } from "../../lib/notes";
+import { supabase } from "../../lib/supabase"; 
 
 function formatDate(ms: number): string {
   return new Date(ms).toLocaleDateString(undefined, {
@@ -40,6 +41,24 @@ function App() {
       getRecentVideos(userId).then(setRecentVideos);
     });
   }, [email]);
+  
+  const handleViewAllNotesClick = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+
+    let targetUrl = "http://localhost:5173"; 
+
+    // If a session exists, attach the tokens to the end of the URL
+    if (session) {
+      targetUrl += `?access_token=${session.access_token}&refresh_token=${session.refresh_token}`;
+    }
+
+    // Open the new tab
+    if (typeof chrome !== 'undefined' && chrome.tabs) {
+      chrome.tabs.create({ url: targetUrl });
+    } else {
+      window.open(targetUrl, '_blank');
+    }
+  };
 
   // Google OAuth: show login when signed out
   if (!email) {
@@ -109,14 +128,12 @@ function App() {
       )}
 
       {/* Links to Website */}
-      <a
-        href="/notes.html"
-        target="_blank"
-        rel="noreferrer"
+      <button
+        onClick={handleViewAllNotesClick}
         className="see-all-btn"
       >
         See All Notes
-      </a>
+      </button>
       <p className="signin-copy">
         Signed in as {email} <br></br>
         <a onClick={logout} className="signout-link">

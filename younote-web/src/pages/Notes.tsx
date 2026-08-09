@@ -5,7 +5,6 @@ import VideoCard from "../components/VideoCard";
 import VideoSearchBar from "../components/VideoSearchBar";
 import { useYouTubeVideos } from "../hooks/useYouTubeVideos";
 import "../styles/Notes.css";
-// Added Supabase import
 import { supabase } from "../lib/supabase";
 
 type YouTubeVideo = {
@@ -41,7 +40,8 @@ type NoteItem = {
   updated_at?: string;
   is_private?: boolean;
   timestamp_seconds?: number;
-  videos?: { youtube_video_id: string };
+  videos?: { id?: string; youtube_video_id: string };
+  profiles?: { username?: string; email?: string };
 };
 
 const tags: Option[] = [
@@ -57,14 +57,21 @@ const tags: Option[] = [
 ];
 
 export default function Notes() {
-  // --- State: selection, inputs, and data ---
   const [selectedOption, setSelectedOption] =
     useState<SingleValue<Option>>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [notes, setNotes] = useState<NoteItem[]>([]);
   const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
+  const [videoRatings, setVideoRatings] = useState<{ profile_id: string; rating: number }[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const [hasUser, setHasUser] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  const [defaultVideos, setDefaultVideos] = useState<YouTubeVideo[]>([]);
+  const [loadingDefaults, setLoadingDefaults] = useState(false);
 
   const {
     videos: ytVid,
@@ -74,7 +81,6 @@ export default function Notes() {
     fetchVideos,
   } = useYouTubeVideos(searchQuery);
 
-  // --- Helpers ---
   const getVideoId = (video: YouTubeVideo) => {
     if (typeof video.id === "string") {
       return video.id;
@@ -82,7 +88,7 @@ export default function Notes() {
     return video.id.videoId;
   };
 
-  // --- Handlers: selection and input actions ---
+  //Removed previous search entry after new search
   const handleChange = (selected: SingleValue<Option>) => {
     setSelectedOption(selected);
     const tag = selected?.value ?? "";
@@ -99,48 +105,42 @@ export default function Notes() {
     setSelectedVideoId(null);
   };
 
+  //Display content for selected video
   const handleVideoSelect = async (videoId: string) => {
-    console.log(`[Notes] Fetching notes for video ID: ${videoId}`);
     setSelectedVideoId(videoId);
     setLoading(true);
+    setVideoRatings([]);
 
     try {
-      //Check if Supabase client knows we are logged in
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      console.log(
-        "[Notes Debug] Current Session:",
-        session ? "Logged In" : "NOT Logged In",
-      );
-
-      //Check if the video exists in the videos table
       const { data: videoData } = await supabase
         .from("videos")
-        .select("*")
-        .eq("youtube_video_id", videoId);
-      console.log("[Notes Debug] Video in DB?", videoData);
+        .select("id")
+        .eq("youtube_video_id", videoId)
+        .maybeSingle();
 
-      //Fetch the notes using the Supabase Client (handles auth automatically!)
+      const vId = videoData?.id || null;
+      if (vId) {
+        const { data: ratingsData } = await supabase
+          .from("video_ratings")
+          .select("rating, profile_id")
+          .eq("video_id", vId);
+
+        if (ratingsData) {
+          setVideoRatings(ratingsData);
+        }
+      }
+
       const { data, error } = await supabase
         .from("notes")
         .select(
-          "id, content, created_at, video_id, is_private, videos!inner(youtube_video_id)",
+          "id, content, created_at, video_id, is_private, profile_id, timestamp_seconds, videos!inner(id, youtube_video_id), profiles(username, email)",
         )
         .eq("videos.youtube_video_id", videoId);
 
-      if (error) {
-        console.error(`[Notes] Supabase Fetch Error:`, error.message);
-        throw error;
-      }
-
-      console.log("[Notes] Raw data returned from Supabase:", data);
-
-      // Update state with our returned notes
-      // Force TypeScript to map the Supabase response to your NoteItem type
+      if (error) throw error;
       setNotes((data as unknown as NoteItem[]) || []);
     } catch (error) {
-      console.error("[Notes] Error fetching notes:", error);
+      console.error("[Notes] Error loading data:", error);
       setNotes([]);
     } finally {
       setLoading(false);
@@ -157,11 +157,130 @@ export default function Notes() {
     }
   };
 
-  // --- Effects ---
   useEffect(() => {
-    // When the search query changes, reset notes array
     setNotes([]);
   }, [searchQuery]);
+
+  //Is the user logged in?
+  useEffect(() => {
+    let isMounted = true;
+
+    const checkAuth = async () => {
+      setAuthLoading(true);
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (isMounted) {
+        setHasUser(!!user);
+        setCurrentUserId(user?.id || null);
+        setAuthLoading(false);
+      }
+    };
+
+    checkAuth();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (isMounted) {
+        setHasUser(!!session?.user);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  //Fetch default videos that already contain notes on page load
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchVideosWithNotes = async () => {
+      if (searchQuery) return;
+
+      setLoadingDefaults(true);
+      try {
+        const { data: notesData, error } = await supabase
+          .from("notes")
+          .select("videos!inner(youtube_video_id)")
+          .or(
+            `is_private.is.false${
+              currentUserId ? `,profile_id.eq.${currentUserId}` : ""
+            }`
+          );
+
+        if (error) throw error;
+
+        const uniqueVideoIds = Array.from(
+          new Set(
+            notesData
+              ?.map((n: any) => n.videos?.youtube_video_id)
+              .filter(Boolean)
+          )
+        );
+
+        if (uniqueVideoIds.length === 0) {
+          if (isMounted) setDefaultVideos([]);
+          setLoadingDefaults(false);
+          return;
+        }
+
+        const apiKey = import.meta.env.VITE_YT_KEY;
+        const idsQuery = uniqueVideoIds.join(",");
+        const response = await fetch(
+          `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails,statistics&id=${idsQuery}&key=${apiKey}`
+        );
+        const result = await response.json();
+
+        if (isMounted) {
+          setDefaultVideos(result.items || []);
+        }
+      } catch (err) {
+        console.error("Error fetching default videos with notes:", err);
+        if (isMounted) setDefaultVideos([]);
+      } finally {
+        if (isMounted) setLoadingDefaults(false);
+      }
+    };
+
+    if (hasUser && !searchQuery) {
+      fetchVideosWithNotes();
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [searchQuery, hasUser, currentUserId]);
+
+  if (authLoading) {
+    return (
+      <div
+        className="notes-page"
+        style={{ textAlign: "center", paddingTop: "60px" }}
+      >
+        <h3>Loading...</h3>
+      </div>
+    );
+  }
+
+  if (!hasUser) {
+    return (
+      <div
+        className="notes-page"
+        style={{ textAlign: "center", paddingTop: "60px" }}
+      >
+        <p>
+          Sign into the extension and click <strong>"View All Notes"</strong> to
+          view this page.
+        </p>
+      </div>
+    );
+  }
+
+  const displayVideos = searchQuery ? ytVid : defaultVideos;
 
   return (
     <div className="notes-page">
@@ -176,36 +295,43 @@ export default function Notes() {
 
       {/* Video Display */}
       <div className="video-list">
-        {!searchQuery ? (
-          <p>
-            Choose a tag or search generally to see the most-viewed long videos.
-          </p>
-        ) : ytVid.length === 0 ? (
-          <p>No long videos found for this search.</p>
+        {!searchQuery && loadingDefaults ? (
+          <p>Loading your saved note videos...</p>
+        ) : !searchQuery && defaultVideos.length === 0 ? (
+          <p>No notes found yet. Try searching for a video above!</p>
+        ) : searchQuery && ytVid.length === 0 ? (
+          <p>No videos found for this search.</p>
         ) : null}
 
-        {ytVid.length > 0 ? (
-          <div className="video-grid">
-            {ytVid.map((video) => {
-              const videoId = getVideoId(video);
-              const channelThumb = video.snippet.channelId
-                ? channelThumbs[video.snippet.channelId]
-                : undefined;
+        {displayVideos.length > 0 ? (
+          <>
+            {!searchQuery && (
+              <h3 style={{ margin: "0 0 12px 0", fontSize: "1.1rem", color: "#374151" }}>
+                Videos with Notes
+              </h3>
+            )}
+            <div className="video-grid">
+              {displayVideos.map((video) => {
+                const videoId = getVideoId(video);
+                const channelThumb = video.snippet.channelId
+                  ? channelThumbs[video.snippet.channelId]
+                  : undefined;
 
-              return (
-                <VideoCard
-                  key={videoId}
-                  video={video}
-                  videoId={videoId}
-                  channelThumb={channelThumb}
-                  onSelect={handleVideoSelect}
-                />
-              );
-            })}
-          </div>
+                return (
+                  <VideoCard
+                    key={videoId}
+                    video={video}
+                    videoId={videoId}
+                    channelThumb={channelThumb}
+                    onSelect={handleVideoSelect}
+                  />
+                );
+              })}
+            </div>
+          </>
         ) : null}
 
-        {nextPageToken ? (
+        {searchQuery && nextPageToken ? (
           <div className="load-more-container">
             <button
               type="button"
@@ -224,6 +350,8 @@ export default function Notes() {
         loading={loading}
         notes={notes}
         videoId={selectedVideoId}
+        currentUserId={currentUserId}
+        videoRatings={videoRatings}
         onClose={handleCloseNotes}
       />
     </div>

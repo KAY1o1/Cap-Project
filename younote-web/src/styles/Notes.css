@@ -8,6 +8,7 @@
   flex-direction: column;
   gap: 20px;
 }
+
 /*Styles for Searching for Videos*/
 .search-bar {
   background: #ffffff;
@@ -51,7 +52,6 @@
   margin-left: 5px;
   min-height: 35px;
 }
-
 /*Styles for Video Results*/
 .video-list {
   display: flex;
@@ -61,16 +61,17 @@
 
 .video-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
   gap: 16px;
   align-items: stretch;
 }
+
 .video-card {
   background: linear-gradient(135deg, #fefce8 0%, #fff7ed 100%);
   border: 1px solid #e7d8b5;
   border-radius: 12px;
-  padding: 16px;
-  min-height: 340px;
+  padding: 14px;
+  min-height: 360px;
   display: flex;
   flex-direction: column;
   box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
@@ -78,71 +79,95 @@
   position: relative;
   overflow: hidden;
 }
+
+/* Paper fold effect */
 .video-card::before {
   content: "";
   position: absolute;
   top: 0;
   right: 0;
-  width: 28px;
-  height: 28px;
-  background: linear-gradient(135deg, #f3e8c8 0%, #f3e8c8 50%, transparent 100%);
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, #f3e8c8 0%, #f3e8c8 50%, #e2d2a9 100%);
   border-left: 1px solid #e7d8b5;
   border-bottom: 1px solid #e7d8b5;
+  box-shadow: -2px 2px 4px rgba(0, 0, 0, 0.04);
+  z-index: 2; /* Ensures the fold sits above the text */
 }
+
 .video-card-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 1px;
-  margin-bottom: 2px;
+  gap: 8px;
+  margin-bottom: 4px;
+  padding-right: 34px; /* 👈 Keeps titles safely away from the top-right fold */
 }
+
 .video-link {
   color: #2563eb;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   text-decoration: none;
-  white-space: nowrap;
+  white-space: normal; /* 👈 Allows long titles to wrap instead of cutting off */
+  word-break: break-word;
+  line-height: 1.2;
 }
+
 .video-link:hover {
   text-decoration: underline;
 }
+
 .video-media {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 6px; /* 👈 Tightened the gap between title/creator/thumbnail */
   flex: 1;
   justify-content: flex-end;
 }
+
 .video-creator {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
+
 .creator-avatar {
-  width: 36px;
-  height: 36px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   object-fit: cover;
   display: inline-block;
   border: 1px solid rgba(0,0,0,0.06);
 }
+
 .creator-name {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   color: #374151;
   font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
+
 .video-thumbnail-button {
   border: none;
   padding: 0;
-  background: none;
+  background: #0f172a; /* 👈 Dark background frames the un-cropped thumbnail cleanly */
   cursor: pointer;
   width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
+
+/* Thumbnail with NO cut-off */
 .video-thumbnail {
   width: 100%;
-  height: 180px;
-  object-fit: cover;
-  border-radius: 8px;
+  height: 150px; 
+  object-fit: contain; /* 👈 Forces the entire image to fit without cropping sides */
   display: block;
 }
 
@@ -192,6 +217,62 @@
   color: #374151;
 }
 
+/* --- Styles for Modal Note Cards --- */
+.note-card {
+  border-bottom: 1px solid #eee;
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+  border: 2px solid;
+  border-radius: 8px;
+  padding: 5px;
+  background-color: lightgrey;
+}
+.note-card-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.note-card-content {
+  margin: 4px 0;
+  font-size: 14px;
+  justify-self: center;
+}
+
+.note-timestamp {
+  font-size: 11px;
+  background: #f0f0f0;
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: #333;
+  display: inline-block;
+}
+
 .load-more-container {
   align-self: center;
+}
+.load-more-button {
+  background-color: #f2f2f2;
+  color: #0f0f0f;
+  border: none;
+  border-radius: 18px; /* Pill-shaped */
+  padding: 10px 24px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  margin: 20px auto; /* Centers it nicely if the parent is flex */
+}
+.load-more-button:hover {
+  background-color: #e5e5e5;
+}
+.load-more-button:active {
+  transform: scale(0.98);
+  background-color: #d9d9d9;
 }
