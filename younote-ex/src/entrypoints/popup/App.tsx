@@ -46,11 +46,11 @@ function App() {
     return (
       <div className="popup">
         <h1>YouNote</h1>
-        <hr></hr>
+        {/* <hr></hr> */}
         <p style={{ textAlign: "center", fontSize: "13px" }}>
           Sign in to use YouNote.
         </p>
-        <button onClick={login}>Sign in with Google</button>
+        <button className="see-all-btn" onClick={login}>Sign in with Google</button>
       </div>
     );
   }
