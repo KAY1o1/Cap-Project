@@ -160,10 +160,10 @@ export default function HomePage({ setPage }: HomePageP) {
 
     return (
         <div className="home-container">
-            <h1 id='dashboard-title'>Notes Dashboard</h1>
-            <hr className='note-dash' />
+            {/* <h1 id='dashboard-title'>Here's what everyone's been watching…</h1> */}
+            {/* <hr className='note-dash' /> */}
 
-            <div id="dashboard-box">
+            <div id="home-feed">
 
                 {/* Recent Activity Section */}
                 {renderSection({

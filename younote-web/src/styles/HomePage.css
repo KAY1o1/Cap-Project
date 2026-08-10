@@ -1,15 +1,40 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,100..900;1,100..900&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+ 
+:root {
+    --font-main: "Inter Tight", sans-serif;
+ 
+    --accent: #f6ea7f;
+    --active: #f6ea7f;
+ 
+    --bg: #110e01;
+    --panel-bg: #1a1605;
+    --card-bg: #201c08;
+    --stat-bg: #3d3d3d;
+    --link-bg: color-mix(in srgb, var(--accent) 20%, transparent);
+ 
+    --text-primary: #fdfae2;
+    --text-muted: #bfbfbf;
+ 
+    --border: #303030;
+ 
+    --link-hover: #ffffff;
+}
+
 *{
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+    font-family: var(--font-main);
 }
 
 #dashboard-title{
     padding: 10px;
 }
 
-#dashboard-box{
-    padding: 10px 50px;
+#home-feed{
+    /* padding: 10px 50px; */
+    max-width: 950px;
+    margin: 0 auto;
 }
 
 .dash-line{
