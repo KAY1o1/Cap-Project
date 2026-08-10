@@ -22,6 +22,7 @@ type Note = {
   videoTime: number;
   isPrivate: boolean;
   profileId: string;
+  username: string;
 };
 
 const NOTE_MAX_LENGTH = 150;
@@ -626,7 +627,12 @@ export default function NotesPanel() {
                   </div>
                 </div>
               ) : (
-                <div className={styles["note-content"]}>{n.text}</div>
+                <div>
+                  <div className={styles["note-username"]}>
+                    @{n.username}
+                  </div>
+                  <div className={styles["note-content"]}>{n.text}</div>
+                </div>
               )}
             </div>
           ))}

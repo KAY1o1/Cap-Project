@@ -9,6 +9,7 @@ type Note = {
   // renamed isPublic to isPrivate to keep it consistent with the Supabase `is_private` column.
   isPrivate: boolean;
   profileId: string;
+  username: string;
 };
 
 // for pop-up
@@ -25,6 +26,7 @@ function mapRow(row: any): Note {
     videoTime: row.timestamp_seconds,
     isPrivate: row.is_private,
     profileId: row.profile_id,
+    username: row.profiles?.username ?? "Unknown User",
   };
 }
 
@@ -40,10 +42,15 @@ export async function getCurrentUserId(): Promise<string | null> {
 // Load notes for a video (own notes + public notes from others, per RLS).
 export async function fetchNotes(videoDbId: string): Promise<Note[]> {
   const { data, error } = await supabase
-    .from("notes")
-    .select("*")
-    .eq("video_id", videoDbId)
-    .order("timestamp_seconds", { ascending: true });
+  .from("notes")
+  .select(`
+    *,
+    profiles (
+      username
+    )
+  `)
+  .eq("video_id", videoDbId)
+  .order("timestamp_seconds", { ascending: true });
 
   if (error) {
     console.error("[YouNote] fetchNotes failed:", error);
@@ -84,11 +91,24 @@ export async function createNote(
     .single();
 
   if (error) {
-    console.error("[YouNote] createNote failed:", error);
-    return null;
-  }
+  console.error("[YouNote] createNote failed:", error);
+  return null;
+}
 
-  return mapRow(data);
+const { data: profile, error: profileError } = await supabase
+  .from("profiles")
+  .select("username")
+  .eq("id", user.id)
+  .single();
+
+if (profileError) {
+  console.error("[YouNote] fetching username failed:", profileError);
+}
+
+return {
+  ...mapRow(data),
+  username: profile?.username ?? "Unknown User",
+};
 }
 
 // Edit a note's text and/or privacy.

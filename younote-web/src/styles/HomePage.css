@@ -27,28 +27,8 @@
     font-family: var(--font-main);
 }
 
-#home-feed h1,
-#home-feed h2,
-#home-feed h3,
-#home-feed h4,
-#home-feed h5 {
-    color: var(--text-primary);
-}
-
-#activity-note,
-#trend-note,
-#suggest-note {
-    color: var(--text-muted);
-}
-
 #dashboard-title{
     padding: 10px;
-}
-
-#home-feed{
-    /* padding: 10px 50px; */
-    /* max-width: 950px;
-    margin: 0 auto; */
 }
 
 .dash-line{
@@ -295,4 +275,45 @@
 .act-box img, .tre-box img, .sug-box img{
     flex-shrink: 0;
 
+}
+
+#home-feed h1,
+#home-feed h2,
+#home-feed h3,
+#home-feed h5 {
+    color: var(--text-primary);
+}
+
+#activity-note,
+#trend-note,
+#suggest-note {
+    color: var(--text-muted);
+}
+
+#activity-box,
+#trend-box,
+#suggest-box {
+    background-color: var(--panel-bg);
+}
+
+.act-box,
+.tre-box,
+.sug-box {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border);
+}
+
+.act-box p,
+.tre-box p,
+.sug-box p {
+    color: var(--text-primary);
+}
+
+.act-details {
+    border: 1px solid var(--border);
+}
+
+.act-video-time {
+    background-color: var(--accent);
+    color: var(--bg);
 }
