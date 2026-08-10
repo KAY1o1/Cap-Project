@@ -31,7 +31,7 @@ const NOTE_MAX_LENGTH = 150;
 type NoteAction =
   | { type: "add"; note: Note }
   | { type: "delete"; note: Note }
-  | { type: "edit"; id: string; before: string; after: string };
+  | { type: "edit"; id: string; before: string; after: string; beforePrivate: boolean; afterPrivate: boolean };
 // END UNDO/REDO
 
 // EXTRACT VID ID FROM URL
@@ -98,6 +98,7 @@ export default function NotesPanel() {
   const [showControls, setShowControls] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
+  const [editIsPrivate, setEditIsPrivate] = useState(true);
   // FILTER: hateful speech
   const [noteError, setNoteError] = useState<string | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
@@ -283,8 +284,9 @@ export default function NotesPanel() {
       }
     } else {
       const text = direction === "undo" ? action.before : action.after;
-      mutateNotes((prev) => prev.map((n) => (n.id === action.id ? { ...n, text } : n)));
-      updateNote(action.id, text); // CALLING BACKEND: notes — sync the reverted/replayed text back to Supabase.
+      const isPrivate = direction === "undo" ? action.beforePrivate : action.afterPrivate;
+      mutateNotes((prev) => prev.map((n) => (n.id === action.id ? { ...n, text, isPrivate } : n)));
+      updateNote(action.id, text, isPrivate); // CALLING BACKEND: notes — sync the reverted/replayed text and privacy back to Supabase.
     }
   };
 
@@ -343,9 +345,10 @@ export default function NotesPanel() {
     if (target) pushAction({ type: "delete", note: target }); // UNDO/REDO
   };
 
-  const startEdit = (id: string, text: string) => {
+  const startEdit = (id: string, text: string, isPrivate: boolean) => {
     setEditingId(id);
     setEditText(text);
+    setEditIsPrivate(isPrivate);
     setEditError(null);
   };
 
@@ -366,13 +369,20 @@ export default function NotesPanel() {
 
     const original = notes.find((n) => n.id === editingId); // UNDO/REDO
     mutateNotes((prev) =>
-      prev.map((n) => (n.id === editingId ? { ...n, text: trimmed } : n))
+      prev.map((n) => (n.id === editingId ? { ...n, text: trimmed, isPrivate: editIsPrivate } : n))
     );
-    // CALLING BACKEND: notes — save the edited text to Supabase.
-    updateNote(editingId, trimmed);
+    // CALLING BACKEND: notes — save the edited text and privacy to Supabase.
+    updateNote(editingId, trimmed, editIsPrivate);
     // END CALLING BACKEND
-    if (original && original.text !== trimmed) {
-      pushAction({ type: "edit", id: editingId, before: original.text, after: trimmed }); // UNDO/REDO
+    if (original && (original.text !== trimmed || original.isPrivate !== editIsPrivate)) {
+      pushAction({
+        type: "edit",
+        id: editingId,
+        before: original.text,
+        after: trimmed,
+        beforePrivate: original.isPrivate,
+        afterPrivate: editIsPrivate,
+      }); // UNDO/REDO
     }
     cancelEdit();
   };
@@ -561,7 +571,7 @@ export default function NotesPanel() {
                 {/* CALLING BACKEND: notes — only the note's owner can edit/delete it (RLS enforces this server-side too, this just hides the buttons for other users' public notes). */}
                 {n.profileId === userId && (
                   <NoteMenu
-                    onEdit={() => startEdit(n.id, n.text)}
+                    onEdit={() => startEdit(n.id, n.text, n.isPrivate)}
                     onDelete={() => handleDelete(n.id)}
                   />
                 )}
@@ -595,6 +605,17 @@ export default function NotesPanel() {
                   {/* FILTER: hateful speech */}
                   {editError && <div className={styles["note-error"]}>{editError}</div>}
                   {/* END FILTER */}
+                  <label className={styles.switch} onMouseDown={(e) => e.preventDefault()}>
+                    <input
+                      type="checkbox"
+                      checked={!editIsPrivate}
+                      onChange={(e) => setEditIsPrivate(!e.target.checked)}
+                    />
+                    <span className={styles.slider}></span>
+                    <span className={styles["switch-label"]}>
+                      {editIsPrivate ? "Private" : "Public"}
+                    </span>
+                  </label>
                   <div className={styles["edit-actions"]}>
                     <button className={styles.cancel} onClick={cancelEdit}>
                       Cancel

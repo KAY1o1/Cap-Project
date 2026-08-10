@@ -91,11 +91,11 @@ export async function createNote(
   return mapRow(data);
 }
 
-// Edit a note's text.
-export async function updateNote(id: string, content: string): Promise<void> {
+// Edit a note's text and/or privacy.
+export async function updateNote(id: string, content: string, isPrivate: boolean): Promise<void> {
   const { error } = await supabase
     .from("notes")
-    .update({ content, updated_at: new Date().toISOString() })
+    .update({ content, is_private: isPrivate, updated_at: new Date().toISOString() })
     .eq("id", id);
 
   if (error) console.error("[YouNote] updateNote failed:", error);
