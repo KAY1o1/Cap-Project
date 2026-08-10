@@ -318,9 +318,9 @@ export default function NotesPage({ setPage }: NotesPageP) {
 
             <div className="notes-container">
                 <div className="notes-header">
-                    {/* <button className="notes-back-btn" onClick={() => setPage('home')}>
+                    <button className="notes-back-btn" onClick={() => setPage('home')}>
                         ← Back
-                    </button> */}
+                    </button>
                     <h1 id="notes-title">
                         {selectedVideo ? selectedVideo.title : 'Notes'}
                     </h1>

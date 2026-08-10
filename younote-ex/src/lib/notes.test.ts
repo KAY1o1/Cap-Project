@@ -115,7 +115,8 @@ describe("updateNote (update)", () => {
     const update = vi.fn().mockReturnValue({ eq });
     from.mockReturnValue({ update });
 
-    await updateNote("note-1", "edited text");
+    // nico added bcs error
+    await updateNote("note-1", "edited text", false);
 
     expect(from).toHaveBeenCalledWith("notes");
     expect(update).toHaveBeenCalledWith(
