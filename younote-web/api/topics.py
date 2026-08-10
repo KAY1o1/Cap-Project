@@ -48,12 +48,12 @@ app.add_middleware(
 )
 
 
-@app.get("/health")
+@app.get("/api/topics/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
-@app.post("/topics", response_model=TopicResponse)
+@app.post("/api/topics", response_model=TopicResponse)
 def topics(request: TopicRequest) -> TopicResponse:
     note_dicts = [note.model_dump() for note in request.notes]
     return TopicResponse(topics=extract_topics(note_dicts))
