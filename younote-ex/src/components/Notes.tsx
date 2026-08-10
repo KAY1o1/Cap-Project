@@ -461,26 +461,14 @@ export default function NotesPanel() {
           maxLength={NOTE_MAX_LENGTH}
         // END CHAR LIMIT
         />
+
+        {/* CHAR LIMIT: live character counter for this textarea */}
         <div className={styles["char-count"]}>
           {note.length}/{NOTE_MAX_LENGTH}
         </div>
-        {noteError && <div className={styles["note-error"]}>{noteError}</div>}
-
-        {/* CHAR LIMIT: live character counter for this textarea */}
-        <div className={styles["char-count"]}>{note.length}/{NOTE_MAX_LENGTH}</div>
-        {/* END CHAR LIMIT */}
 
         {/* FILTER: hateful speech */}
         {noteError && <div className={styles["note-error"]}>{noteError}</div>}
-        {/* END FILTER */}
-
-        {/* CHAR LIMIT: live character counter for this textarea */}
-        <div className={styles["char-count"]}>{note.length}/{NOTE_MAX_LENGTH}</div>
-        {/* END CHAR LIMIT */}
-
-        {/* FILTER: hateful speech */}
-        {noteError && <div className={styles["note-error"]}>{noteError}</div>}
-        {/* END FILTER */}
 
         {/* hidden submit and privacy toggle button */}
         {showControls && (
