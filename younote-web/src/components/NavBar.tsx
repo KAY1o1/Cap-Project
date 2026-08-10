@@ -1,6 +1,6 @@
 // import React, {useState} from 'react';
 import '../styles/NavBar.css';
-import logoImg from '../assets/images/YouNote.png'
+import logoImg from '../assets/images/YouNotes.png'
 import type { Session } from '@supabase/supabase-js';
 
 interface NavBarP {

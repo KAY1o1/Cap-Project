@@ -3,7 +3,8 @@ import type { Session } from '@supabase/supabase-js'
 import { supabase } from './lib/supabase'
 import NavBar from './components/NavBar'
 import HomePage from './pages/HomePage'
-import Notes from './pages/Notes'
+import Notes from './pages/NotesPage'
+import './index.css';
 
 function App() {
   const [currentPage, setCurrentPage] = useState<'home' | 'notes'>('home')

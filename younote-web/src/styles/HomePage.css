@@ -27,21 +27,35 @@
     font-family: var(--font-main);
 }
 
+#home-feed h1,
+#home-feed h2,
+#home-feed h3,
+#home-feed h4,
+#home-feed h5 {
+    color: var(--text-primary);
+}
+
+#activity-note,
+#trend-note,
+#suggest-note {
+    color: var(--text-muted);
+}
+
 #dashboard-title{
     padding: 10px;
 }
 
 #home-feed{
     /* padding: 10px 50px; */
-    max-width: 950px;
-    margin: 0 auto;
+    /* max-width: 950px;
+    margin: 0 auto; */
 }
 
 .dash-line{
     border: none;
     height: 1px;
     background-color: black;
-    width: 90%;
+    /* width: 99%; */
     padding: 0.5px;
     margin: 10px auto;
 
