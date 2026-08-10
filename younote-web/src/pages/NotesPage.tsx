@@ -288,8 +288,7 @@ export default function NotesPage({ setPage }: NotesPageP) {
         try {
             setTopicLoading(true);
             setTopicError(null);
-            const apiUrl = (import.meta.env.VITE_TOPIC_API_URL || 'http://localhost:8000').replace(/\/$/, '');
-            const response = await fetch(`${apiUrl}/topics`, {
+            const response = await fetch('/api/topics', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -305,7 +304,7 @@ export default function NotesPage({ setPage }: NotesPageP) {
             setKeyTopics(data.topics);
         } catch (err) {
             console.error('Error generating key topics:', err);
-            setTopicError('Could not generate topics. Start the topic service and try again.');
+            setTopicError('Could not generate topics. Try again.');
             setKeyTopics([]);
         } finally {
             setTopicLoading(false);
