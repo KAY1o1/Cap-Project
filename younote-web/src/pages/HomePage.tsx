@@ -227,7 +227,7 @@ export default function HomePage({ setPage }: HomePageP) {
                     }
                 })}
 
-                <hr className='dash-line-end' />
+                {/* <hr className='dash-line-end' />/ */}
 
                 {/* Trending Section */}
                 {renderSection({
@@ -253,7 +253,8 @@ export default function HomePage({ setPage }: HomePageP) {
                     )
                 })}
 
-                <hr className='dash-line-end' />
+                {/* <hr className='dash-line-end' /> */}
+                
 
                 {/* Ratings Section */}
                 {renderSection({
