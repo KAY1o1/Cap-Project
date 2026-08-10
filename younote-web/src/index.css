@@ -1,0 +1,8 @@
+html {
+    background-color: black;
+}
+
+.main-content {
+    max-width: 950px;
+    margin: 0 auto
+}
