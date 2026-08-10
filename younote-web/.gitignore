@@ -11,6 +11,9 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+__pycache__/
+*.py[cod]
+.venv/
 .output
 stats.html
 stats-*.json
@@ -27,4 +30,3 @@ web-ext.config.ts
 *.njsproj
 *.sln
 *.sw?
-

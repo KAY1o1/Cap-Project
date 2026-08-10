@@ -29,6 +29,13 @@ type RatingRow = {
     video?: VideoItem[] | VideoItem;
 };
 
+type KeyTopic = {
+    term: string;
+    mention_count: number;
+    note_count: number;
+    timestamps: number[];
+};
+
 type NotesPageP = {
     setPage: (page: 'home' | 'notes') => void;
 };
@@ -69,6 +76,9 @@ export default function NotesPage({ setPage }: NotesPageP) {
     const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
     const [ratingsByVideoId, setRatingsByVideoId] = useState<Record<string, number>>({});
     const [ratingRows, setRatingRows] = useState<RatingRow[]>([]);
+    const [keyTopics, setKeyTopics] = useState<KeyTopic[]>([]);
+    const [topicLoading, setTopicLoading] = useState(false);
+    const [topicError, setTopicError] = useState<string | null>(null);
 
     useEffect(() => {
         let isMounted = true;
@@ -144,8 +154,8 @@ export default function NotesPage({ setPage }: NotesPageP) {
         return Array.isArray(videoWrapper) ? (videoWrapper[0] ?? null) : videoWrapper;
     };
 
-    // Group notes by video so each video acts as a "folder" in the sidebar,
-    // then add in any rated videos that have no notes at all yet.
+    // Group notes by video like a folder in the sidebar,
+    // + any rated videos that have no notes at all yet.
     const videoFolders = useMemo<VideoFolder[]>(() => {
         const foldersByVideoId = new Map<string, VideoFolder>();
 
@@ -269,6 +279,38 @@ export default function NotesPage({ setPage }: NotesPageP) {
         window.open(url, '_blank', 'noopener,noreferrer');
     };
 
+    const generateKeyTopics = async () => {
+        if (!selectedVideoId) return;
+
+        const videoNotes = notes.filter((note) => note.video_id === selectedVideoId);
+        if (videoNotes.length === 0) return;
+
+        try {
+            setTopicLoading(true);
+            setTopicError(null);
+            const response = await fetch('/api/topics', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    notes: videoNotes.map((note) => ({
+                        content: note.content,
+                        timestamp_seconds: note.timestamp_seconds,
+                    })),
+                }),
+            });
+
+            if (!response.ok) throw new Error('Topic service request failed');
+            const data = await response.json() as { topics: KeyTopic[] };
+            setKeyTopics(data.topics);
+        } catch (err) {
+            console.error('Error generating key topics:', err);
+            setTopicError('Could not generate topics. Try again.');
+            setKeyTopics([]);
+        } finally {
+            setTopicLoading(false);
+        }
+    };
+
     const filteredNotes = useMemo(() => {
         let scoped = selectedVideoId
             ? notes.filter((note) => note.video_id === selectedVideoId)
@@ -291,6 +333,11 @@ export default function NotesPage({ setPage }: NotesPageP) {
     const selectedVideo = selectedVideoId
         ? videoFolders.find((video) => video.id === selectedVideoId) || null
         : null;
+
+    useEffect(() => {
+        setKeyTopics([]);
+        setTopicError(null);
+    }, [selectedVideoId]);
 
     if (loading) {
         return (
@@ -327,18 +374,45 @@ export default function NotesPage({ setPage }: NotesPageP) {
                 </div>
 
                 {selectedVideo && (
-                    <p className="notes-subheader">
-                        by {selectedVideo.creator || 'Creator'}
-                        {ratingsByVideoId[selectedVideo.id] !== undefined && (
-                            <>
-                                {' '}·{' '}
-                                <span className="notes-rating">
-                                    {ratingsByVideoId[selectedVideo.id]}/5{' '}
-                                    {'✏️'.repeat(Math.max(0, Math.min(5, Math.floor(ratingsByVideoId[selectedVideo.id]))))}
-                                </span>
-                            </>
-                        )}
-                    </p>
+                    <>
+                        <p className="notes-subheader">
+                            by {selectedVideo.creator || 'Creator'}
+                            {ratingsByVideoId[selectedVideo.id] !== undefined && (
+                                <>
+                                    {' '}·{' '}
+                                    <span className="notes-rating">
+                                        {ratingsByVideoId[selectedVideo.id]}/5{' '}
+                                        {'✏️'.repeat(Math.max(0, Math.min(5, Math.floor(ratingsByVideoId[selectedVideo.id]))))}
+                                    </span>
+                                </>
+                            )}
+                        </p>
+                        <div className="key-topics-panel">
+                            <div className="key-topics-heading">
+                                <div>
+                                    <h2>Key topics</h2>
+                                    <p>Generated from all notes for this video.</p>
+                                </div>
+                                <button
+                                    className="key-topics-button"
+                                    onClick={generateKeyTopics}
+                                    disabled={topicLoading || !notes.some((note) => note.video_id === selectedVideoId)}
+                                >
+                                    {topicLoading ? 'Finding topics...' : 'Generate topics'}
+                                </button>
+                            </div>
+                            {topicError && <p className="key-topics-error">{topicError}</p>}
+                            {keyTopics.length > 0 && (
+                                <div className="key-topics-list" aria-label="Generated key topics">
+                                    {keyTopics.map((topic) => (
+                                        <span key={topic.term} className="key-topic-chip" title={`Mentioned in ${topic.note_count} note${topic.note_count === 1 ? '' : 's'}`}>
+                                            {topic.term}
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </>
                 )}
 
                 {!selectedVideoId ? (

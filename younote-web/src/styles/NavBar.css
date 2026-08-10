@@ -7,11 +7,11 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    /* padding: 0.8rem 2rem; */
+    /* padding: 1rem 0rem; */
     background-color: black;
     max-width: 950px;
     margin: 0 auto;
-    height: 72px;
+    height: 90px;
 }
 
 .logo-section{
@@ -56,7 +56,7 @@
 }
 
 .nav-buttons button:disabled{
-    color: rgb(162, 13, 43);
+    color: #f6ea7f;
 }
 
 .profile-section{
