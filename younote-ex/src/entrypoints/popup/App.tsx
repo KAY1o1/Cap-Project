@@ -45,8 +45,8 @@ function App() {
   const handleViewAllNotesClick = async () => {
     const { data: { session } } = await supabase.auth.getSession();
 
-    let targetUrl = "http://localhost:5173"; 
-    // let targetUrl = "https://you-note-web.vercel.app/";
+    // let targetUrl = "http://localhost:5173"; 
+    let targetUrl = "https://you-note-web.vercel.app/";
 
     // If a session exists, attach the tokens to the end of the URL
     if (session) {

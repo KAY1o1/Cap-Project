@@ -9,7 +9,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from topic_generator import extract_topics
+# from topic_generator import extract_topics
+from api.topic_generator import extract_topics
 
 # cap 150 chars
 class NoteInput(BaseModel):
