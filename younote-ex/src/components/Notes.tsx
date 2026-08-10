@@ -566,7 +566,7 @@ export default function NotesPanel() {
                     </svg>
                   </span>}
                   <button className={styles.timestamp} onClick={() => seekTo(n.videoTime)}>
-                    @{formatTime(n.videoTime)}
+                    {formatTime(n.videoTime)}
                   </button>
                 </div>
                 {/* CALLING BACKEND: notes — only the note's owner can edit/delete it (RLS enforces this server-side too, this just hides the buttons for other users' public notes). */}
@@ -627,11 +627,14 @@ export default function NotesPanel() {
                   </div>
                 </div>
               ) : (
-                <div>
+                <div className={styles["note-content-wrapper"]}>
                   <div className={styles["note-username"]}>
                     @{n.username}
                   </div>
-                  <div className={styles["note-content"]}>{n.text}</div>
+
+                  <div className={styles["note-content"]}>
+                    {n.text}
+                  </div>
                 </div>
               )}
             </div>

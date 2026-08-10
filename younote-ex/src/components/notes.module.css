@@ -220,6 +220,18 @@
   scroll-snap-align: start;
 }
 
+.note-content-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.note-username {
+  font-size: 11px;
+  color: #a0a0a0;
+  font-weight: 500;
+}
+
 .note-content {
   font-size: 14px;
   color: var(--text-primary);
