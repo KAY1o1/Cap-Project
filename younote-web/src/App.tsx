@@ -80,10 +80,11 @@ function App() {
         return <HomePage setPage={setCurrentPage} />;
 
       case 'notes':
-        return <Notes/>;
+        return <NotesPage setPage={setCurrentPage}/>;
 
       case 'explore':
-        return <NotesPage setPage={setCurrentPage}/>;
+        return <Notes/>;
+        
 
       default:
         return <HomePage setPage={setCurrentPage} />;
