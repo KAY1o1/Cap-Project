@@ -1,4 +1,22 @@
 # YouNote
 Team Members: Camren Henderson, Mackayla Dangleben, Nico Bautista-Libreros, Xin(Sue) Sui
 
-A social note taking tool for YouTube.
+## Setup
+
+### 1. Clone and install
+
+```bash
+git clone https://github.com/KAY1o1/Cap-Project.git 
+```
+
+```
+npm install && npm run dev
+```
+
+### 2. Load Extension
+1. Open chrome or chromium
+1. Open `chrome://extensions/`
+1. Turn on Developer mode (top right)
+1. Click **Load unpacked**
+1. Select `younote-ex/.output/chrome-mv3-dev`
+    - (You may need to "Show hidden files" in the file picker if `.output` isn't visible)
