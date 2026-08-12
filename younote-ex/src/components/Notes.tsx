@@ -56,12 +56,12 @@ function getVideoMeta(): { title: string; creator: string } {
 }
 // END CALLING BACKEND
 
-function formatTime(seconds: number): string {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = Math.floor(seconds % 60);
+function formatTime(totalSeconds: number): string {
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = Math.floor(totalSeconds % 60);
 
-  if (seconds > 3600) {
+  if (h > 0) {
     return `${h}:${m}:${s.toString().padStart(2, "0")}`
   } else {
     return `${m}:${s.toString().padStart(2, "0")}`

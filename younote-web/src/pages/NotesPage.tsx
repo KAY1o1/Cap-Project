@@ -40,21 +40,22 @@ type NotesPageP = {
     setPage: (page: 'home' | 'notes' | 'explore') => void;
 };
 
-const formatVideoTimestamp = (totalSeconds: number | undefined) => {
+// For timestamps
+const formatTime = (totalSeconds: number | undefined) => {
     if (totalSeconds === undefined || totalSeconds === null) return null;
 
-    const hrs = Math.floor(totalSeconds / 3600);
-    const mins = Math.floor((totalSeconds % 3600) / 60);
-    const secs = Math.floor(totalSeconds % 60);
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    const s = Math.floor(totalSeconds % 60);
 
-    const paddedSecs = secs.toString().padStart(2, '0');
+    const paddedSecs = s.toString().padStart(2, '0');
 
-    if (hrs > 0) {
-        const paddedMins = mins.toString().padStart(2, '0');
-        return `${hrs}:${paddedMins}:${paddedSecs}`;
+    if (h > 0) {
+        const paddedMins = m.toString().padStart(2, '0');
+        return `${h}:${paddedMins}:${paddedSecs}`;
     }
 
-    return `${mins}:${paddedSecs}`;
+    return `${m}:${paddedSecs}`;
 };
 
 const formatDate = (isoString: string | undefined) => {
@@ -448,7 +449,7 @@ export default function NotesPage({ setPage }: NotesPageP) {
 
                         <div className="notes-card-grid">
                             {filteredNotes.map((note) => {
-                                const videoTimeMarker = formatVideoTimestamp(note.timestamp_seconds);
+                                const videoTimeMarker = formatTime(note.timestamp_seconds);
 
                                 return (
                                     <div key={note.id} className="note-card">
