@@ -17,7 +17,7 @@ npm install && npm run dev
 ```
 
 ### 2. Load Extension
-1. Open chrome or chromium
+1. Open chrome or a chromium based browser
 1. Go to `chrome://extensions/`
 1. Turn on Developer mode (top right toggle)
 1. Click **Load unpacked**
