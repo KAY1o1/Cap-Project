@@ -5,7 +5,7 @@ export default defineConfig({
   // Tells Chrome to enable chrome.storage for your group's code
   srcDir: 'src',
   manifest: {
-    permissions: ['storage'],
+    permissions: ['storage', 'identity'],
   },
 
   vite: () => ({
