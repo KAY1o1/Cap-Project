@@ -1,15 +1,41 @@
+/*
+This file creates the Supabase client, 
+configures Google/PKCE authentication, 
+and makes Supabase store the user's session in 
+Chrome's local extension storage 
+so different parts of the extension can share the login.
+the jwt token is usually good for 1 hour.
+*/
+
 import { createClient } from "@supabase/supabase-js";
 
-// save the login in chrome.storage so the popup and the youtube page both see it
-const storage = {
-  getItem: (k: string) =>
-    chrome.storage.local.get(k).then((r) => (r[k] ?? null) as string | null),
-  setItem: (k: string, v: string) => chrome.storage.local.set({ [k]: v }),
-  removeItem: (k: string) => chrome.storage.local.remove(k),
+const customStorage = 
+{
+    getItem: async function (key: string): Promise<string | null>
+     {
+      const result = await chrome.storage.local.get(key);
+      return (result[key] as string) || null;
+    },
+
+    setItem: async function (key: string, value: string): Promise<void>
+    {
+      await chrome.storage.local.set({ [key]: value });
+    },
+
+    removeItem: async function (key: string): Promise<void> 
+    {
+      await chrome.storage.local.remove(key); // token expires or supabase.auth.signOut() calls this from auth.ts
+    },
 };
 
-export const supabase = createClient(
-  import.meta.env.WXT_SUPABASE_URL,
-  import.meta.env.WXT_SUPABASE_KEY,
-  { auth: { flowType: "pkce", detectSessionInUrl: false, storage } }
-);
+const supabaseUrl = import.meta.env.WXT_SUPABASE_URL;
+const supabaseKey = import.meta.env.WXT_SUPABASE_KEY;
+
+export const supabase = createClient(supabaseUrl, supabaseKey, 
+{
+  auth: {
+    flowType: "pkce",
+    detectSessionInUrl: false,
+    storage: customStorage,
+  },
+});
