@@ -56,6 +56,7 @@ const tags: Option[] = [
   { value: "technology", label: "Technology" },
 ];
 
+
 export default function Notes() {
   const [selectedOption, setSelectedOption] =
     useState<SingleValue<Option>>(null);

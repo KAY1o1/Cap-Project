@@ -3,11 +3,12 @@ import type { Session } from '@supabase/supabase-js'
 import { supabase } from './lib/supabase'
 import NavBar from './components/NavBar'
 import HomePage from './pages/HomePage'
-import Notes from './pages/NotesPage'
+import Notes from './pages/Notes'
 import './index.css';
+import NotesPage from './pages/NotesPage'
 
 function App() {
-  const [currentPage, setCurrentPage] = useState<'home' | 'notes'>('home')
+  const [currentPage, setCurrentPage] = useState<'home' | 'notes' | 'explore'>('home')
   const [session, setSession] = useState<Session | null>(null)
 
   // Listen for the auth token from the extension
@@ -79,7 +80,10 @@ function App() {
         return <HomePage setPage={setCurrentPage} />;
 
       case 'notes':
-        return <Notes setPage={setCurrentPage} />;
+        return <Notes/>;
+
+      case 'explore':
+        return <NotesPage setPage={setCurrentPage}/>;
 
       default:
         return <HomePage setPage={setCurrentPage} />;

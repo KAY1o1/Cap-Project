@@ -4,8 +4,8 @@ import logoImg from '../assets/images/YouNotes.png'
 import type { Session } from '@supabase/supabase-js';
 
 interface NavBarP {
-   setPage: (pageName: 'home' | 'notes' ) => void;
-   currentPage: 'home' | 'notes' ;
+   setPage: (pageName: 'home' | 'notes' | 'explore' ) => void;
+   currentPage: 'home' | 'notes' | 'explore' ;
    UserUrl?: string;
    session: Session |null;
 }
@@ -23,6 +23,9 @@ const NavBar = ({ setPage, currentPage, UserUrl, session }: NavBarP) => {
                </button>
                <button onClick={() => setPage('notes')} disabled={currentPage === 'notes'}>
                   Notes
+               </button>
+               <button onClick={() => setPage('explore')} disabled={currentPage === 'explore'}>
+                  Explore
                </button>
             </div>
 

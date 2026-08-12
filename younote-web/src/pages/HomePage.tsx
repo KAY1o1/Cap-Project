@@ -37,7 +37,7 @@ type RatingItem = {
 };
 
 type HomePageP = {
-    setPage: (page: 'home' | 'notes') => void;
+    setPage: (page: 'home' | 'notes' | 'explore') => void;
 };
 
 export default function HomePage({ setPage }: HomePageP) {

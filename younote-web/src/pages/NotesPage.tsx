@@ -37,7 +37,7 @@ type KeyTopic = {
 };
 
 type NotesPageP = {
-    setPage: (page: 'home' | 'notes') => void;
+    setPage: (page: 'home' | 'notes' | 'explore') => void;
 };
 
 const formatVideoTimestamp = (totalSeconds: number | undefined) => {
