@@ -128,6 +128,7 @@ export default function HomePage({ setPage }: HomePageP) {
         };
     }, []);
 
+    // retrieve the video thumbnail by the video id, if nothing founded then it defualts to placeholder image
     const getThumb = (videoWrapper: any) => {
         if (!videoWrapper) return Images.placeholder;
 
@@ -149,7 +150,7 @@ export default function HomePage({ setPage }: HomePageP) {
         );
     }
 
-
+    // verify if the user is sign-in, if not it defualt to show the user to sign-in
     if (!hasUser) {
         return (
             <div className='home-container' style={{ textAlign: 'center', paddingTop: '60px' }}>
@@ -160,8 +161,6 @@ export default function HomePage({ setPage }: HomePageP) {
 
     return (
         <div className="home-container">
-            {/* <h1 id='dashboard-title'>Here's what everyone's been watching…</h1> */}
-            {/* <hr className='note-dash' /> */}
 
             <div id="home-feed">
 
@@ -227,8 +226,6 @@ export default function HomePage({ setPage }: HomePageP) {
                     }
                 })}
 
-                {/* <hr className='dash-line-end' />/ */}
-
                 {/* Trending Section */}
                 {renderSection({
                     title: "Trends",
@@ -252,8 +249,6 @@ export default function HomePage({ setPage }: HomePageP) {
                         </a>
                     )
                 })}
-
-                {/* <hr className='dash-line-end' /> */}
                 
 
                 {/* Ratings Section */}
