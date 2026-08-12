@@ -1,4 +1,10 @@
-// this is entrypiont for injecting to into youtube
+/* this is entrypiont for WXT
+When I'm on YouTube, create my Notes component, 
+put it in the sidebar if the sidebar is available, 
+otherwise put it below the video, 
+and keep checking its position 
+whenever YouTube changes or the window is resized.
+*/
 
 import { createRoot } from "react-dom/client";
 import Notes from "../components/Notes";
