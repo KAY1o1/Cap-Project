@@ -1,6 +1,12 @@
 {
+  "name": "younote",
+  "private": true,
+  "version": "1.0.0",
   "scripts": {
-    "dev": "concurrently -n web,ext -c blue,green \"npm run dev --prefix younote-web\" \"npm run dev --prefix younote-ex\""
+    "install:all": "cd younote-web && npm install && cd .. && cd younote-ex && npm install && cd ..",
+    "dev": "concurrently -n web,ext -c blue,green \"npm run dev --prefix younote-web\" \"npm run dev --prefix younote-ex\"",
+    "dev:web": "npm run dev --prefix younote-web",
+    "dev:ext": "npm run dev --prefix younote-ex"
   },
   "devDependencies": {
     "concurrently": "^9.0.0"
