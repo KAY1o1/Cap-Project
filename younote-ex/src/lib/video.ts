@@ -1,23 +1,41 @@
-// FOR BACKEND: video
+/*
+makes sure a YouTube video exists in the videos table
+avoids duplicates using the YouTube video ID
+and returns the video's Supabase database ID
+*/
+
 import { supabase } from "./supabase";
 
-// Upsert the video and return its internal id (needed as video_ratings.video_id).
 export async function ensureVideo(
   youtubeVideoId: string,
   title: string,
   creator: string
 ): Promise<string | null> {
-  const { data, error } = await supabase
+  const response = await supabase
     .from("videos")
-    .upsert(
-      { youtube_video_id: youtubeVideoId, title, creator },
+    .upsert( // upsert = update and insert, Postgres uses it (supabase uses postgres)
+      { 
+        youtube_video_id: youtubeVideoId, 
+        title: title, 
+        creator: creator 
+      },
       { onConflict: "youtube_video_id" }
     )
     .select("id")
     .single();
 
-  if (error) {
+  const data = response.data;
+  const error = response.error;
+
+  if (error !== null)
+  {
     console.error("[YouNote] ensureVideo failed:", error);
+    return null;
+  }
+
+  if (data === null || data === undefined)
+  {
+    console.error("[YouNote] data is null or undefined:", error);
     return null;
   }
 
