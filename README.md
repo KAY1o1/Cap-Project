@@ -13,7 +13,9 @@ git clone https://github.com/KAY1o1/Cap-Project.git
 ```
 
 ```
-npm install && npm run dev
+npm install
+npm run install:all  
+npm run dev
 ```
 
 ### 2. Load Extension
