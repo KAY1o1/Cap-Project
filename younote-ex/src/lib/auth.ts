@@ -9,14 +9,12 @@ import { useEffect, useState } from "react";
 import { supabase } from "./supabase";
 
 
-export async function login(): Promise<void> 
+export async function login(): Promise<void>
 {
   const response = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      
-      redirectTo: chrome.identity.getRedirectURL(),
-      
+      redirectTo: "https://www.youtube.com/",
       skipBrowserRedirect: true,
     },
   });
@@ -28,28 +26,7 @@ export async function login(): Promise<void>
     return;
   }
 
-
-  const responseUrl = await chrome.identity.launchWebAuthFlow( // opens a small pop up
-  {
-    url: data.url,
-    interactive: true,
-  });
-
-  if (responseUrl === null || responseUrl === undefined)
-  {
-    return;
-  }
-
-
-  const urlObject = new URL(responseUrl);
-  const code = urlObject.searchParams.get("code"); // without oepnng a new page, extract the code
-
-  if (code === null)
-  {
-    return;
-  }
-
-  await supabase.auth.exchangeCodeForSession(code);
+  window.open(data.url, "_blank");
 }
 
 

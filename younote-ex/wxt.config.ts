@@ -6,7 +6,7 @@ export default defineConfig({
   srcDir: 'src',
   manifest:
   {
-    permissions: ['storage', 'identity'], // redirect back to page,
+    permissions: ['storage'],
   },
 
   webExt:
