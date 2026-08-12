@@ -3,6 +3,9 @@ Team Members: Camren Henderson, Mackayla Dangleben, Nico Bautista-Libreros, Xin(
 
 ## Setup
 
+### 0. Set up environment
+Rename both `.env.example` files to `.env` and fill with the correct values
+
 ### 1. Clone and install
 
 ```bash
