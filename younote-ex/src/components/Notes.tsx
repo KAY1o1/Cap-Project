@@ -1,18 +1,21 @@
+/*
+main YouNote component that manages the note-taking UI, 
+note CRUD operations, 
+undo/redo, 
+privacy, 
+validation, 
+video timestamps,
+the video-rating feature while connecting everything to Supabase.
+*/
+
 import { useEffect, useState, useMemo } from "react";
 import NoteMenu from "./NoteMenu";
-import { useSession } from "../lib/auth"; // Google OAuth
-// CALLING BACKEND: profiles
+import { useSession } from "../lib/auth";
 import { ensureProfile } from "../lib/db";
-// CALLING BACKEND: video
 import { ensureVideo } from "../lib/video";
-// CALLING BACKEND: rating
 import { fetchRating, saveRatingToSupabase } from "../lib/ratings";
-// CALLING BACKEND: notes
 import { fetchNotes, createNote, updateNote, deleteNote, restoreNote, getCurrentUserId } from "../lib/notes";
-// END CALLING BACKEND
-// FILTER: hateful speech
 import { containsHatefulLanguage } from "../lib/profanity";
-// END FILTER
 import styles from "./notes.module.css";
 
 type Note = {
@@ -27,20 +30,15 @@ type Note = {
 
 const NOTE_MAX_LENGTH = 150;
 
-// UNDO/REDO: one entry per committed note action (add/delete/edit), so undo/redo
-// can replay the inverse/forward change against both local state and Supabase.
 type NoteAction =
   | { type: "add"; note: Note }
   | { type: "delete"; note: Note }
   | { type: "edit"; id: string; before: string; after: string; beforePrivate: boolean; afterPrivate: boolean };
-// END UNDO/REDO
 
-// EXTRACT VID ID FROM URL
 function getVideoId(): string | null {
   return new URL(window.location.href).searchParams.get("v");
 }
 
-// CALLING BACKEND: extract vid title + creator so we can log the video in Supabase
 function getVideoMeta(): { title: string; creator: string } {
   const title =
     document
@@ -54,7 +52,6 @@ function getVideoMeta(): { title: string; creator: string } {
 
   return { title, creator };
 }
-// END CALLING BACKEND
 
 function formatTime(seconds: number): string {
   const h = Math.floor(seconds / 3600);
@@ -69,51 +66,193 @@ function formatTime(seconds: number): string {
 }
 
 export default function NotesPanel() {
-  const email = useSession(); // Google OAuth
+  const email = useSession();
   const [videoId, setVideoId] = useState<string | null>(getVideoId);
 
-  // CALLING BACKEND: profiles — when someone is signed in, log their info into the Supabase `profiles` table.
   useEffect(() => {
     if (email) ensureProfile();
   }, [email]);
-  // END CALLING BACKEND
 
-  // ===== SUE'S CONTRIBUTION: backend-calling state (video/profile/notes/undo-redo) =====
-  // CALLING BACKEND: video — internal Supabase id for the current video (needed for ratings).
+  // ===== SUE'S CONTRIBUTION: state, undo/redo, notes CRUD, char limit + filter checks =====
   const [videoDbId, setVideoDbId] = useState<string | null>(null);
-  // END CALLING BACKEND
 
-  // CALLING BACKEND: notes — who's signed in, so we only show Edit/Delete on that user's own notes.
   const [userId, setUserId] = useState<string | null>(null);
   useEffect(() => {
     if (email) getCurrentUserId().then(setUserId);
     else setUserId(null);
   }, [email]);
-  // END CALLING BACKEND
 
   const [notes, setNotes] = useState<Note[]>([]);
   const [note, setNote] = useState("");
-  // CALLING BACKEND: notes — renamed isPublic to isPrivate to keep it consistent with the Supabase `is_private` column.
   const [isPrivate, setIsPrivate] = useState(true);
-  // END CALLING BACKEND
   const [showControls, setShowControls] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
   const [editIsPrivate, setEditIsPrivate] = useState(true);
-  // FILTER: hateful speech
   const [noteError, setNoteError] = useState<string | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
-  // END FILTER
 
-  // UNDO/REDO: stacks of committed note actions for this video.
   const [history, setHistory] = useState<{ past: NoteAction[]; future: NoteAction[] }>({
     past: [],
     future: [],
   });
-  // END UNDO/REDO
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === "TEXTAREA" || target.tagName === "INPUT") return;
+      if (!(e.metaKey || e.ctrlKey)) return;
+
+      const key = e.key.toLowerCase();
+      if (key === "z" && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+      } else if ((key === "z" && e.shiftKey) || key === "y") {
+        e.preventDefault();
+        redo();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [videoDbId]);
+
+  const sortedNotes = useMemo(() => {
+    return [...notes].sort((a, b) => a.videoTime - b.videoTime);
+  }, [notes]);
+
+  const getCurrentVideoTime = (): number => {
+    const player = document.querySelector("video");
+    return player ? player.currentTime : 0;
+  };
+
+  const mutateNotes = (updater: (prev: Note[]) => Note[]) => {
+    setNotes((prev) => updater(prev));
+  };
+
+  const pushAction = (action: NoteAction) => {
+    setHistory((h) => ({ past: [...h.past, action], future: [] }));
+  };
+
+  const applyAction = (action: NoteAction, direction: "undo" | "redo") => {
+    if (action.type === "add") {
+      if (direction === "undo") {
+        mutateNotes((prev) => prev.filter((n) => n.id !== action.note.id));
+        deleteNote(action.note.id);
+      } else {
+        mutateNotes((prev) => [...prev, action.note]);
+        if (videoDbId) restoreNote(action.note, videoDbId);
+      }
+    } else if (action.type === "delete") {
+      if (direction === "undo") {
+        mutateNotes((prev) => [...prev, action.note]);
+        if (videoDbId) restoreNote(action.note, videoDbId);
+      } else {
+        mutateNotes((prev) => prev.filter((n) => n.id !== action.note.id));
+        deleteNote(action.note.id);
+      }
+    } else {
+      const text = direction === "undo" ? action.before : action.after;
+      const isPrivate = direction === "undo" ? action.beforePrivate : action.afterPrivate;
+      mutateNotes((prev) => prev.map((n) => (n.id === action.id ? { ...n, text, isPrivate } : n)));
+      updateNote(action.id, text, isPrivate);
+    }
+  };
+
+  const undo = () => {
+    setHistory((h) => {
+      if (h.past.length === 0) return h;
+      const action = h.past[h.past.length - 1];
+      applyAction(action, "undo");
+      return { past: h.past.slice(0, -1), future: [...h.future, action] };
+    });
+  };
+
+  const redo = () => {
+    setHistory((h) => {
+      if (h.future.length === 0) return h;
+      const action = h.future[h.future.length - 1];
+      applyAction(action, "redo");
+      return { past: [...h.past, action], future: h.future.slice(0, -1) };
+    });
+  };
+
+  const handleSubmit = async () => {
+    const trimmed = note.trim();
+    if (!trimmed) return;
+
+    if (containsHatefulLanguage(trimmed)) {
+      setNoteError("This note contains hateful or offensive language. Please rephrase it.");
+      return;
+    }
+    setNoteError(null);
+
+    if (!videoDbId) {
+      console.log("[YouNote] handleSubmit: videoDbId not ready yet, skipping note save");
+      return;
+    }
+
+    const newNote = await createNote(videoDbId, trimmed, getCurrentVideoTime(), isPrivate);
+    if (!newNote) return;
+
+    mutateNotes((prev) => [...prev, newNote]);
+    pushAction({ type: "add", note: newNote });
+    setNote("");
+  };
+
+  const handleDelete = (id: string) => {
+    const target = notes.find((n) => n.id === id);
+    mutateNotes((prev) => prev.filter((n) => n.id !== id));
+    deleteNote(id);
+    if (target) pushAction({ type: "delete", note: target });
+  };
+
+  const startEdit = (id: string, text: string, isPrivate: boolean) => {
+    setEditingId(id);
+    setEditText(text);
+    setEditIsPrivate(isPrivate);
+    setEditError(null);
+  };
+
+  const saveEdit = () => {
+    if (!editingId) return;
+    const trimmed = editText.trim();
+    if (!trimmed) {
+      cancelEdit();
+      return;
+    }
+
+    if (containsHatefulLanguage(trimmed)) {
+      setEditError("This note contains hateful or offensive language. Please rephrase it.");
+      return;
+    }
+
+    const original = notes.find((n) => n.id === editingId);
+    mutateNotes((prev) =>
+      prev.map((n) => (n.id === editingId ? { ...n, text: trimmed, isPrivate: editIsPrivate } : n))
+    );
+    updateNote(editingId, trimmed, editIsPrivate);
+    if (original && (original.text !== trimmed || original.isPrivate !== editIsPrivate)) {
+      pushAction({
+        type: "edit",
+        id: editingId,
+        before: original.text,
+        after: trimmed,
+        beforePrivate: original.isPrivate,
+        afterPrivate: editIsPrivate,
+      });
+    }
+    cancelEdit();
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditText("");
+    setEditError(null);
+  };
   // ===== END SUE'S CONTRIBUTION =====
 
-  // ===== NBAULIB'S CONTRIBUTION: rating UI state =====
+  // ===== NBAULIB'S CONTRIBUTION: rating state, UI, and handlers =====
   const [hoverRating, setHoverRating] = useState<number | null>(null);
 
   function PencilIcon({ filled }: { filled: boolean }) {
@@ -136,14 +275,10 @@ export default function NotesPanel() {
       </svg>
     );
   }
-  // RATING
   const [showRating, setShowRating] = useState(false);
   const [rated, setRated] = useState(false);
   const [rating, setRating] = useState<number | null>(null);
-  // ===== END NBAULIB'S CONTRIBUTION =====
 
-  // ===== NBAULIB'S CONTRIBUTION =====
-  // PROMPT RATING AT 75% OF VIDEO
   useEffect(() => {
     if (!videoId) return;
 
@@ -163,239 +298,7 @@ export default function NotesPanel() {
 
     return () => clearInterval(interval);
   }, [videoId, rated]);
-  // ===== END NBAULIB'S CONTRIBUTION =====
 
-  // ===== SUE'S CONTRIBUTION =====
-  // UNDO/REDO: Ctrl/Cmd+Z to undo, Ctrl/Cmd+Shift+Z or Ctrl/Cmd+Y to redo.
-  // Skipped while focus is in a textarea/input so native text-editing undo isn't hijacked.
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement;
-      if (target.tagName === "TEXTAREA" || target.tagName === "INPUT") return;
-      if (!(e.metaKey || e.ctrlKey)) return;
-
-      const key = e.key.toLowerCase();
-      if (key === "z" && !e.shiftKey) {
-        e.preventDefault();
-        undo();
-      } else if ((key === "z" && e.shiftKey) || key === "y") {
-        e.preventDefault();
-        redo();
-      }
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [videoDbId]);
-  // END UNDO/REDO
-  // ===== END SUE'S CONTRIBUTION =====
-
-  // SPA NAVIGATION LISTENER (foundational, predates both features below)
-  useEffect(() => {
-    const handleNavigate = () => setVideoId(getVideoId());
-    document.addEventListener("yt-navigate-finish", handleNavigate);
-    return () => document.removeEventListener("yt-navigate-finish", handleNavigate);
-  }, []);
-
-  // RESET NOTE ON NEW VIDEO
-  // NOTE: this effect is intentionally shared — Sue's notes fetch and nbaulib's rating
-  // fetch both depend on the same ensureVideo() call below, so they can't be split into
-  // separate effects without calling ensureVideo() (and writing to Supabase) twice per video.
-  useEffect(() => {
-    if (!videoId) {
-      setNotes([]);
-      setRating(null);
-      setRated(false);
-      setShowRating(false);
-      setVideoDbId(null); // CALLING BACKEND: video — reset id on video change
-      return;
-    }
-
-    setEditingId(null);
-    setNote("");
-    setHistory({ past: [], future: [] }); // UNDO/REDO: reset per video
-
-    // CALLING BACKEND: video — log this video into the Supabase `videos` table.
-    const { title, creator } = getVideoMeta();
-    ensureVideo(videoId, title, creator).then((dbId) => {
-      setVideoDbId(dbId);
-      // CALLING BACKEND: notes — load notes for this video from Supabase.
-      if (dbId) fetchNotes(dbId).then(setNotes);
-      else setNotes([]);
-      // END CALLING BACKEND
-
-      // CALLING BACKEND: rating — load this user's rating for this video from Supabase.
-      if (dbId) {
-        fetchRating(dbId).then((savedRating) => {
-          setRating(savedRating);
-
-          if (savedRating !== null) {
-            setRated(true);
-          }
-        });
-      } else {
-        setRating(null);
-        setRated(false);
-      }
-      // END CALLING BACKEND
-    });
-    // END CALLING BACKEND
-  }, [videoId]);
-
-  // SORT ON UPDATE
-  const sortedNotes = useMemo(() => {
-    return [...notes].sort((a, b) => a.videoTime - b.videoTime);
-  }, [notes]);
-
-  // TIMESTAMP HELPER
-  const getCurrentVideoTime = (): number => {
-    const player = document.querySelector("video");
-    return player ? player.currentTime : 0;
-  };
-
-  // ===== SUE'S CONTRIBUTION: notes CRUD, undo/redo, char limit + filter checks =====
-  // MUTATION HELPER
-  const mutateNotes = (updater: (prev: Note[]) => Note[]) => {
-    setNotes((prev) => updater(prev));
-  };
-
-  // UNDO/REDO: record a committed action and clear the redo stack.
-  const pushAction = (action: NoteAction) => {
-    setHistory((h) => ({ past: [...h.past, action], future: [] }));
-  };
-
-  // UNDO/REDO: apply an action's inverse ("undo") or forward ("redo") effect,
-  // to both local state and Supabase.
-  const applyAction = (action: NoteAction, direction: "undo" | "redo") => {
-    if (action.type === "add") {
-      if (direction === "undo") {
-        mutateNotes((prev) => prev.filter((n) => n.id !== action.note.id));
-        deleteNote(action.note.id); // CALLING BACKEND: notes — undo an add by deleting the note from Supabase.
-      } else {
-        mutateNotes((prev) => [...prev, action.note]);
-        if (videoDbId) restoreNote(action.note, videoDbId); // CALLING BACKEND: notes — redo an add by re-inserting the note with its original id.
-      }
-    } else if (action.type === "delete") {
-      if (direction === "undo") {
-        mutateNotes((prev) => [...prev, action.note]);
-        if (videoDbId) restoreNote(action.note, videoDbId); // CALLING BACKEND: notes — undo a delete by re-inserting the note with its original id.
-      } else {
-        mutateNotes((prev) => prev.filter((n) => n.id !== action.note.id));
-        deleteNote(action.note.id); // CALLING BACKEND: notes — redo a delete by removing the note from Supabase again.
-      }
-    } else {
-      const text = direction === "undo" ? action.before : action.after;
-      const isPrivate = direction === "undo" ? action.beforePrivate : action.afterPrivate;
-      mutateNotes((prev) => prev.map((n) => (n.id === action.id ? { ...n, text, isPrivate } : n)));
-      updateNote(action.id, text, isPrivate); // CALLING BACKEND: notes — sync the reverted/replayed text and privacy back to Supabase.
-    }
-  };
-
-  const undo = () => {
-    setHistory((h) => {
-      if (h.past.length === 0) return h;
-      const action = h.past[h.past.length - 1];
-      applyAction(action, "undo");
-      return { past: h.past.slice(0, -1), future: [...h.future, action] };
-    });
-  };
-
-  const redo = () => {
-    setHistory((h) => {
-      if (h.future.length === 0) return h;
-      const action = h.future[h.future.length - 1];
-      applyAction(action, "redo");
-      return { past: [...h.past, action], future: h.future.slice(0, -1) };
-    });
-  };
-  // END UNDO/REDO
-
-  const handleSubmit = async () => {
-    const trimmed = note.trim();
-    if (!trimmed) return;
-
-    // FILTER: hateful speech — block hateful/racist notes before they're saved.
-    if (containsHatefulLanguage(trimmed)) {
-      setNoteError("This note contains hateful or offensive language. Please rephrase it.");
-      return;
-    }
-    setNoteError(null);
-    // END FILTER
-
-    // CALLING BACKEND: notes — insert this note into the Supabase `notes` table.
-    if (!videoDbId) {
-      console.log("[YouNote] handleSubmit: videoDbId not ready yet, skipping note save");
-      return;
-    }
-
-    const newNote = await createNote(videoDbId, trimmed, getCurrentVideoTime(), isPrivate);
-    // END CALLING BACKEND
-    if (!newNote) return;
-
-    mutateNotes((prev) => [...prev, newNote]);
-    pushAction({ type: "add", note: newNote }); // UNDO/REDO
-    setNote("");
-  };
-
-  const handleDelete = (id: string) => {
-    const target = notes.find((n) => n.id === id); // UNDO/REDO
-    mutateNotes((prev) => prev.filter((n) => n.id !== id));
-    // CALLING BACKEND: notes — delete this note from Supabase.
-    deleteNote(id);
-    // END CALLING BACKEND
-    if (target) pushAction({ type: "delete", note: target }); // UNDO/REDO
-  };
-
-  const startEdit = (id: string, text: string, isPrivate: boolean) => {
-    setEditingId(id);
-    setEditText(text);
-    setEditIsPrivate(isPrivate);
-    setEditError(null);
-  };
-
-  const saveEdit = () => {
-    if (!editingId) return;
-    const trimmed = editText.trim();
-    if (!trimmed) {
-      cancelEdit();
-      return;
-    }
-
-    // FILTER: hateful speech — block hateful/racist notes before they're saved.
-    if (containsHatefulLanguage(trimmed)) {
-      setEditError("This note contains hateful or offensive language. Please rephrase it.");
-      return;
-    }
-    // END FILTER
-
-    const original = notes.find((n) => n.id === editingId); // UNDO/REDO
-    mutateNotes((prev) =>
-      prev.map((n) => (n.id === editingId ? { ...n, text: trimmed, isPrivate: editIsPrivate } : n))
-    );
-    // CALLING BACKEND: notes — save the edited text and privacy to Supabase.
-    updateNote(editingId, trimmed, editIsPrivate);
-    // END CALLING BACKEND
-    if (original && (original.text !== trimmed || original.isPrivate !== editIsPrivate)) {
-      pushAction({
-        type: "edit",
-        id: editingId,
-        before: original.text,
-        after: trimmed,
-        beforePrivate: original.isPrivate,
-        afterPrivate: editIsPrivate,
-      }); // UNDO/REDO
-    }
-    cancelEdit();
-  };
-
-  const cancelEdit = () => {
-    setEditingId(null);
-    setEditText("");
-    setEditError(null);
-  };
-  // ===== END SUE'S CONTRIBUTION =====
-
-  // ===== NBAULIB'S CONTRIBUTION: rating trigger + timestamp seek =====
   const seekTo = (seconds: number) => {
     const player = document.querySelector("video");
     if (player) player.currentTime = seconds;
@@ -408,13 +311,51 @@ export default function NotesPanel() {
     setRated(true);
     setShowRating(false);
 
-    // CALLING BACKEND: rating — log this rating into the Supabase `video_ratings` table.
     if (videoDbId) saveRatingToSupabase(videoDbId, value);
-    // END CALLING BACKEND
   };
   // ===== END NBAULIB'S CONTRIBUTION =====
 
-  // START OF UI
+  useEffect(() => {
+    const handleNavigate = () => setVideoId(getVideoId());
+    document.addEventListener("yt-navigate-finish", handleNavigate);
+    return () => document.removeEventListener("yt-navigate-finish", handleNavigate);
+  }, []);
+
+  useEffect(() => {
+    if (!videoId) {
+      setNotes([]);
+      setRating(null);
+      setRated(false);
+      setShowRating(false);
+      setVideoDbId(null);
+      return;
+    }
+
+    setEditingId(null);
+    setNote("");
+    setHistory({ past: [], future: [] });
+
+    const { title, creator } = getVideoMeta();
+    ensureVideo(videoId, title, creator).then((dbId) => {
+      setVideoDbId(dbId);
+      if (dbId) fetchNotes(dbId).then(setNotes);
+      else setNotes([]);
+
+      if (dbId) {
+        fetchRating(dbId).then((savedRating) => {
+          setRating(savedRating);
+
+          if (savedRating !== null) {
+            setRated(true);
+          }
+        });
+      } else {
+        setRating(null);
+        setRated(false);
+      }
+    });
+  }, [videoId]);
+
   if (!email) {
     return (
       <div className={styles.container}>
@@ -426,9 +367,9 @@ export default function NotesPanel() {
 
   return (
     <div className={styles.container}>
+      {/* ===== SUE'S CONTRIBUTION: main UI (title bar, note input, notes list) ===== */}
       <div className={styles["title-row"]}>
         <h3 className={styles.title}>YouNote</h3>
-        {/* UNDO/REDO */}
         <div className={styles["history-buttons"]}>
           <button
             type="button"
@@ -449,7 +390,6 @@ export default function NotesPanel() {
             ↷
           </button>
         </div>
-        {/* END UNDO/REDO */}
       </div>
 
       <div
@@ -468,20 +408,15 @@ export default function NotesPanel() {
           }}
           placeholder="Add a note..."
           className={styles.textarea}
-          // CHAR LIMIT: enforce the 150-char cap on this textarea
           maxLength={NOTE_MAX_LENGTH}
-        // END CHAR LIMIT
         />
 
-        {/* CHAR LIMIT: live character counter for this textarea */}
         <div className={styles["char-count"]}>
           {note.length}/{NOTE_MAX_LENGTH}
         </div>
 
-        {/* FILTER: hateful speech */}
         {noteError && <div className={styles["note-error"]}>{noteError}</div>}
 
-        {/* hidden submit and privacy toggle button */}
         {showControls && (
           <div className={styles["hidden-buttons"]}>
             <label className={styles.switch} onMouseDown={(e) => e.preventDefault()}>
@@ -496,67 +431,26 @@ export default function NotesPanel() {
               </span>
             </label>
 
-            {/* CALLING BACKEND: notes — disabled until videoDbId resolves, to avoid a race condition where Submit silently no-ops before Supabase has a row for this video. */}
             <button className={styles.submit} onClick={handleSubmit} disabled={!videoDbId}>
               Submit
             </button>
-            {/* END CALLING BACKEND */}
           </div>
         )}
       </div>
 
-      {/* ===== NBAULIB'S CONTRIBUTION: rating UI ===== */}
-      <div className={styles.rating}>
-        {showRating && (
-          // rating editor
-          <div className={styles.stars} onMouseLeave={() => setHoverRating(null)}>
-            {[1, 2, 3, 4, 5].map((star) => (
-              <button
-                key={star}
-                className={styles.star}
-                onClick={() => handleRating(star)}
-                onMouseEnter={() => setHoverRating(star)}
-                aria-label={`Rate ${star} star${star > 1 ? "s" : ""}`}
-              >
-                <PencilIcon filled={star <= (hoverRating ?? rating ?? 0)} />
-              </button>
-            ))}
-          </div>
-        )}
-
-        {rating && !showRating && (
-          // saved rating
-          <button
-            className={styles.savedRating}
-            onClick={() => setShowRating(true)}
-            aria-label={`Edit rating, currently ${rating} out of 5`}
-          >
-            {[1, 2, 3, 4, 5].map((star) => (
-              <PencilIcon key={star} filled={star <= rating} />
-            ))}
-          </button>
-        )}
-      </div>
-      {/* ===== END NBAULIB'S CONTRIBUTION ===== */}
-
-      {/* ===== SUE'S CONTRIBUTION: notes list rendering (nbaulib's eye-icon UI is nested inside per-note, see below) ===== */}
       {sortedNotes.length > 0 && (
         <div className={styles.carousel}>
           {sortedNotes.map((n) => (
             <div key={n.id} className={styles.card}>
               <div className={styles.header}>
-                {/* NBAULIB'S CONTRIBUTION: eye-open/eye-closed privacy icons */}
                 <div className={styles["card-actions"]}>
                   {!n.isPrivate && <span className={styles.lock}>
-                    {/* eye open */}
                     <svg width="18" height="12" viewBox="0 0 18 12" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <circle cx="8.75" cy="5.75" r="2" fill="#E6E6E6" />
                       <path d="M8.88991 0C12.7688 0 16.0899 3.3152 17.4641 4.91113C17.885 5.40006 17.885 6.09994 17.4641 6.58887C16.0899 8.1848 12.7688 11.5 8.88991 11.5V9.5C10.2657 9.5 11.668 8.90444 12.9788 7.99805C13.8546 7.3924 14.6166 6.69687 15.212 6.08556C15.3942 5.89846 15.3942 5.60154 15.212 5.41444C14.6166 4.80313 13.8546 4.1076 12.9788 3.50195C11.668 2.59556 10.2657 2 8.88991 2C7.51411 2 6.11182 2.59556 4.80104 3.50195C3.92495 4.10776 3.16241 4.80316 2.56687 5.41449C2.38464 5.60154 2.38464 5.89846 2.56687 6.08551C3.16241 6.69684 3.92495 7.39224 4.80104 7.99805C6.11182 8.90444 7.51411 9.5 8.88991 9.5V11.5C5.25351 11.5 2.1074 8.58643 0.595963 6.90723L0.315689 6.58887C-0.10523 6.09994 -0.10523 5.40006 0.315689 4.91113C1.68991 3.3152 5.01103 0 8.88991 0Z" fill="#E6E6E6" />
                     </svg>
-
                   </span>}
                   {n.isPrivate && <span className={styles.lock}>
-                    {/* eye closed */}
                     <svg width="18" height="10" viewBox="0 0 18 10" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path d="M16.6093 1.00002C11.6427 6.92528 6.20311 7.15316 1.00002 1.00002" stroke="#E6E6E6" strokeWidth="2" strokeLinecap="round" />
                       <path d="M3.83808 4.01989L1.94604 6.53645" stroke="#E6E6E6" strokeWidth="2" strokeLinecap="round" />
@@ -569,14 +463,12 @@ export default function NotesPanel() {
                     {formatTime(n.videoTime)}
                   </button>
                 </div>
-                {/* CALLING BACKEND: notes — only the note's owner can edit/delete it (RLS enforces this server-side too, this just hides the buttons for other users' public notes). */}
                 {n.profileId === userId && (
                   <NoteMenu
                     onEdit={() => startEdit(n.id, n.text, n.isPrivate)}
                     onDelete={() => handleDelete(n.id)}
                   />
                 )}
-                {/* END CALLING BACKEND */}
               </div>
 
               {editingId === n.id ? (
@@ -589,9 +481,7 @@ export default function NotesPanel() {
                       setEditError(null);
                     }}
                     autoFocus
-                    // CHAR LIMIT: enforce the 150-char cap on this textarea
                     maxLength={NOTE_MAX_LENGTH}
-                    // END CHAR LIMIT
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
                         saveEdit();
@@ -600,12 +490,8 @@ export default function NotesPanel() {
                       }
                     }}
                   />
-                  {/* CHAR LIMIT: live character counter for this textarea */}
                   <div className={styles["char-count"]}>{editText.length}/{NOTE_MAX_LENGTH}</div>
-                  {/* END CHAR LIMIT */}
-                  {/* FILTER: hateful speech */}
                   {editError && <div className={styles["note-error"]}>{editError}</div>}
-                  {/* END FILTER */}
                   <label className={styles.switch} onMouseDown={(e) => e.preventDefault()}>
                     <input
                       type="checkbox"
@@ -642,6 +528,38 @@ export default function NotesPanel() {
         </div>
       )}
       {/* ===== END SUE'S CONTRIBUTION ===== */}
+
+      {/* ===== NBAULIB'S CONTRIBUTION: rating UI ===== */}
+      <div className={styles.rating}>
+        {showRating && (
+          <div className={styles.stars} onMouseLeave={() => setHoverRating(null)}>
+            {[1, 2, 3, 4, 5].map((star) => (
+              <button
+                key={star}
+                className={styles.star}
+                onClick={() => handleRating(star)}
+                onMouseEnter={() => setHoverRating(star)}
+                aria-label={`Rate ${star} star${star > 1 ? "s" : ""}`}
+              >
+                <PencilIcon filled={star <= (hoverRating ?? rating ?? 0)} />
+              </button>
+            ))}
+          </div>
+        )}
+
+        {rating && !showRating && (
+          <button
+            className={styles.savedRating}
+            onClick={() => setShowRating(true)}
+            aria-label={`Edit rating, currently ${rating} out of 5`}
+          >
+            {[1, 2, 3, 4, 5].map((star) => (
+              <PencilIcon key={star} filled={star <= rating} />
+            ))}
+          </button>
+        )}
+      </div>
+      {/* ===== END NBAULIB'S CONTRIBUTION ===== */}
     </div>
   );
 }
