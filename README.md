@@ -19,6 +19,7 @@ Everyday Americans spend upwards of seven hours on media consumption daily, and 
 
 ### Option 1: Pre-built Extension
 1. Download `younote-extension.zip` from GitHub Actions.
+    - Latest: https://github.com/KAY1o1/Cap-Project/actions/runs/31660795909 
 2. Unzip the downloaded file.
 3. Open Chrome or any Chromium-based browser
 4. Go to `chrome://extensions/`.
