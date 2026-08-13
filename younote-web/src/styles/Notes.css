@@ -11,10 +11,10 @@
 
 /*Styles for Searching for Videos*/
 .search-bar {
-  background: #ffffff;
+  background: var(--light);
   border-radius: 12px;
   padding: 20px;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 8px 24px rgb(50, 90, 142, 0.35);
 }
 .search-bar h1 {
   margin: 0 0 8px;
@@ -67,7 +67,7 @@
 }
 
 .video-card {
-  background: linear-gradient(135deg, #fefce8 0%, #fff7ed 100%);
+  /* background: linear-gradient(135deg, #fefce8 0%, #fff7ed 100%); */
   border: 1px solid #e7d8b5;
   border-radius: 12px;
   padding: 14px;
@@ -82,7 +82,7 @@
 
 /* Paper fold effect */
 .video-card::before {
-  content: "";
+  /* content: "";
   position: absolute;
   top: 0;
   right: 0;
@@ -92,7 +92,8 @@
   border-left: 1px solid #e7d8b5;
   border-bottom: 1px solid #e7d8b5;
   box-shadow: -2px 2px 4px rgba(0, 0, 0, 0.04);
-  z-index: 2; /* Ensures the fold sits above the text */
+  z-index: 2;  */
+  /* Ensures the fold sits above the text */
 }
 
 .video-card-header {
@@ -105,7 +106,7 @@
 }
 
 .video-link {
-  color: #2563eb;
+  color: var(--link-hover);
   font-size: 0.85rem;
   text-decoration: none;
   white-space: normal; /* 👈 Allows long titles to wrap instead of cutting off */

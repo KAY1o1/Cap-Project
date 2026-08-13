@@ -1,28 +1,3 @@
-/* NotesPage.css */
-@import url('https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,100..900;1,100..900&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
-
-:root {
-    --font-main: "Inter Tight", sans-serif;
-
-    --accent: #f6ea7f;
-    --active: #f6ea7f;
-
-    --bg: #110e01;
-    --panel-bg: #1a1605;
-    --card-bg: #201c08;
-    --stat-bg: #3d3d3d;
-    --link-bg: color-mix(in srgb, var(--accent) 20%, transparent);
-
-    --text-primary: #fdfae2;
-    --text-muted: #bfbfbf;
-
-    --border: #303030;
-
-    --link-hover: #ffffff;
-
-    --danger: #f28b82;
-}
-
 * {
     margin: 0;
     padding: 0;
@@ -68,6 +43,8 @@
     font-weight: 600;
 }
 
+/* KEY TOPICS */
+
 .key-topics-panel {
     margin-top: 18px;
     padding: 14px;
@@ -100,7 +77,7 @@
     border: 1px solid var(--accent);
     border-radius: 7px;
     background: var(--accent);
-    color: var(--bg);
+    color: var(--light);
     cursor: pointer;
     font-family: var(--font-main);
     font-size: 0.78rem;
@@ -133,6 +110,8 @@
     font-size: 0.8rem;
     margin-top: 10px;
 }
+
+/* NOTES HEADER */
 
 .notes-header {
     display: flex;
@@ -169,6 +148,7 @@
     color: var(--text-primary);
 }
 
+/* SEARCH */
 .notes-search-row {
     display: flex;
     align-items: center;
@@ -237,9 +217,10 @@
     gap: 14px;
 }
 
+/* NOTE CARD */
+
 .note-card {
     min-width: 220px;
-    max-width: 260px;
     flex: 1 1 220px;
     box-sizing: border-box;
     padding: 16px;
@@ -250,6 +231,11 @@
     border: 1px solid var(--border);
     border-radius: 11px;
     transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.note-card-content-wrapper {
+    display: flex;
+    flex-direction: column;
 }
 
 .note-card:hover {
@@ -340,6 +326,8 @@
     color: var(--text-muted);
 }
 
+/* EDIT MODE */
+
 .note-card-edit-area {
     display: flex;
     flex-direction: column;
@@ -371,6 +359,8 @@
     gap: 8px;
 }
 
+/* HIDDEN BUTTON */
+
 .note-card-cancel-btn,
 .note-card-save-btn {
     font-family: var(--font-main);
@@ -396,7 +386,7 @@
 .note-card-save-btn {
     background: var(--accent);
     border: 1px solid var(--accent);
-    color: var(--bg);
+    color: var(--light);
 }
 
 .note-card-save-btn:hover:not(:disabled) {
@@ -407,4 +397,112 @@
 .note-card-save-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+}
+
+
+/* MENU STYLES*/
+
+.note-card-menu-button,
+.menu-button {
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* transition: color 0.2s ease, background-color 0.2s ease; */
+}
+
+.note-card-menu-button:hover,
+.menu-button:hover {
+  color: var(--accent);
+  background-color: var(--link-bg);
+}
+
+.note-card-menu-popup,
+.menu-popup {
+  width: 90px;
+  background: var(--card-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+  display: flex;
+  flex-direction: column;
+}
+
+.note-card-menu-popup button,
+.menu-popup button {
+  width: 100%;
+  padding: 10px 12px;
+  background: transparent;
+  border: none;
+  font-family: var(--font-main);
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.note-card-menu-popup button:hover,
+.menu-popup button:hover {
+  background: var(--link-bg);
+  color: var(--accent);
+}
+
+/* --- Edit Wrapper Styles --- */
+.edit-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.edit-wrapper .textarea {
+  width: 100%;
+  min-height: 60px;
+  padding: 8px 10px;
+  font-family: var(--font-main);
+  font-size: 14px;
+  background-color: var(--panel-bg);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  border-radius: 8px;
+  outline: none;
+  resize: vertical;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.edit-wrapper .textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+.edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.edit-actions .submit {
+  margin: 0;
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  color: var(--light);
+  font-family: var(--font-main);
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.edit-actions .submit:hover {
+  opacity: 0.9;
 }
