@@ -3,6 +3,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import VideoSidebar from '../components/VideoSidebar';
 import type { VideoFolder } from '../components/VideoSidebar';
+import NoteCard from '../components/NoteCard';
+import KeyTopicsPanel from '../components/KeyTopicsPanel';
 
 type VideoItem = {
     id: string;
@@ -19,6 +21,9 @@ type NoteItem = {
     content: string;
     created_at: string;
     timestamp_seconds?: number;
+    is_private: boolean;
+    // username: string;
+    // handles array OR a single object
     video?: VideoItem[] | VideoItem;
 };
 
@@ -29,39 +34,8 @@ type RatingRow = {
     video?: VideoItem[] | VideoItem;
 };
 
-type KeyTopic = {
-    term: string;
-    mention_count: number;
-    note_count: number;
-    timestamps: number[];
-};
-
 type NotesPageP = {
     setPage: (page: 'home' | 'notes' | 'explore') => void;
-};
-
-// For timestamps
-const formatTime = (totalSeconds: number | undefined) => {
-    if (totalSeconds === undefined || totalSeconds === null) return null;
-
-    const h = Math.floor(totalSeconds / 3600);
-    const m = Math.floor((totalSeconds % 3600) / 60);
-    const s = Math.floor(totalSeconds % 60);
-
-    const paddedSecs = s.toString().padStart(2, '0');
-
-    if (h > 0) {
-        const paddedMins = m.toString().padStart(2, '0');
-        return `${h}:${paddedMins}:${paddedSecs}`;
-    }
-
-    return `${m}:${paddedSecs}`;
-};
-
-const formatDate = (isoString: string | undefined) => {
-    if (!isoString) return '';
-    const date = new Date(isoString);
-    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 };
 
 export default function NotesPage({ setPage }: NotesPageP) {
@@ -70,18 +44,22 @@ export default function NotesPage({ setPage }: NotesPageP) {
     const [hasUser, setHasUser] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
+
+    // delete/edit tracking IDs
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editingText, setEditingText] = useState('');
     const [savingId, setSavingId] = useState<string | null>(null);
+
     const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
     const [ratingsByVideoId, setRatingsByVideoId] = useState<Record<string, number>>({});
     const [ratingRows, setRatingRows] = useState<RatingRow[]>([]);
-    const [keyTopics, setKeyTopics] = useState<KeyTopic[]>([]);
-    const [topicLoading, setTopicLoading] = useState(false);
-    const [topicError, setTopicError] = useState<string | null>(null);
+
+    const [userId, setUserId] = useState<string | null>(null);
+    const [editingIsPrivate, setEditingIsPrivate] = useState(false);
 
     useEffect(() => {
+        // isMounted guards against setState after the component's gone
         let isMounted = true;
 
         const fetchNotes = async () => {
@@ -98,12 +76,16 @@ export default function NotesPage({ setPage }: NotesPageP) {
                     return;
                 }
 
-                if (isMounted) setHasUser(true);
+                if (isMounted) {
+                    setHasUser(true);
+                    setUserId(user.id); // 2. Store the user ID in state
+                }
 
+                // parallel queries to the database
                 const [notesResult, ratingsResult] = await Promise.all([
                     supabase
                         .from('notes')
-                        .select(`id, profile_id, video_id, content, created_at, timestamp_seconds, video:videos!video_id(id, title, youtube_video_id, creator)`)
+                        .select(`id, profile_id, video_id, content, created_at, timestamp_seconds, is_private, video:videos!video_id(id, title, youtube_video_id, creator)`)
                         .eq('profile_id', user.id)
                         .order('created_at', { ascending: false }),
 
@@ -113,6 +95,7 @@ export default function NotesPage({ setPage }: NotesPageP) {
                         .eq('profile_id', user.id),
                 ]);
 
+                // error for notes
                 if (notesResult.error) throw notesResult.error;
 
                 if (isMounted) {
@@ -140,6 +123,7 @@ export default function NotesPage({ setPage }: NotesPageP) {
 
         fetchNotes();
 
+        // Re-fetch whenever auth state changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
             fetchNotes();
         });
@@ -150,13 +134,14 @@ export default function NotesPage({ setPage }: NotesPageP) {
         };
     }, []);
 
+    // handles array or object again
     const getVideoData = (videoWrapper: NoteItem['video']): VideoItem | null => {
         if (!videoWrapper) return null;
         return Array.isArray(videoWrapper) ? (videoWrapper[0] ?? null) : videoWrapper;
     };
 
-    // Group notes by video like a folder in the sidebar,
-    // + any rated videos that have no notes at all yet.
+    // Group notes by video, like a folder in the sidebar
+    // + any rated videos that have no notes at all yet
     const videoFolders = useMemo<VideoFolder[]>(() => {
         const foldersByVideoId = new Map<string, VideoFolder>();
 
@@ -182,6 +167,7 @@ export default function NotesPage({ setPage }: NotesPageP) {
             }
         }
 
+        // videos with no note but ratings are displayed
         for (const rating of ratingRows) {
             if (foldersByVideoId.has(rating.video_id)) continue;
 
@@ -198,12 +184,13 @@ export default function NotesPage({ setPage }: NotesPageP) {
             });
         }
 
+        // most recent note on top
         return Array.from(foldersByVideoId.values()).sort(
             (a, b) => new Date(b.lastNoteAt).getTime() - new Date(a.lastNoteAt).getTime()
         );
     }, [notes, ratingRows]);
 
-    // Default to the video with the most recent note once notes have loaded
+    // displays first folder by default
     useEffect(() => {
         if (selectedVideoId === null && videoFolders.length > 0) {
             setSelectedVideoId(videoFolders[0].id);
@@ -213,11 +200,7 @@ export default function NotesPage({ setPage }: NotesPageP) {
     const startEdit = (note: NoteItem) => {
         setEditingId(note.id);
         setEditingText(note.content);
-    };
-
-    const cancelEdit = () => {
-        setEditingId(null);
-        setEditingText('');
+        setEditingIsPrivate(note.is_private); // Sync privacy state on edit
     };
 
     const saveEdit = async (noteId: string) => {
@@ -231,13 +214,20 @@ export default function NotesPage({ setPage }: NotesPageP) {
             setSavingId(noteId);
             const { error: updateError } = await supabase
                 .from('notes')
-                .update({ content: trimmed })
+                .update({
+                    content: trimmed,
+                    is_private: editingIsPrivate // Save privacy change
+                })
                 .eq('id', noteId);
 
             if (updateError) throw updateError;
 
             setNotes((prev) =>
-                prev.map((note) => (note.id === noteId ? { ...note, content: trimmed } : note))
+                prev.map((note) =>
+                    note.id === noteId
+                        ? { ...note, content: trimmed, is_private: editingIsPrivate }
+                        : note
+                )
             );
             setEditingId(null);
             setEditingText('');
@@ -249,7 +239,13 @@ export default function NotesPage({ setPage }: NotesPageP) {
         }
     };
 
+    const cancelEdit = () => {
+        setEditingId(null);
+        setEditingText('');
+    };
+
     const handleDelete = async (noteId: string) => {
+        // window appears if you want to delete
         const confirmed = window.confirm('Delete this note? This can\'t be undone.');
         if (!confirmed) return;
 
@@ -271,6 +267,7 @@ export default function NotesPage({ setPage }: NotesPageP) {
         }
     };
 
+    // map to the time of the note
     const openVideoAtTimestamp = (note: NoteItem) => {
         const video = getVideoData(note.video);
         if (!video?.youtube_video_id) return;
@@ -280,38 +277,8 @@ export default function NotesPage({ setPage }: NotesPageP) {
         window.open(url, '_blank', 'noopener,noreferrer');
     };
 
-    const generateKeyTopics = async () => {
-        if (!selectedVideoId) return;
-
-        const videoNotes = notes.filter((note) => note.video_id === selectedVideoId);
-        if (videoNotes.length === 0) return;
-
-        try {
-            setTopicLoading(true);
-            setTopicError(null);
-            const response = await fetch('/api/topics', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    notes: videoNotes.map((note) => ({
-                        content: note.content,
-                        timestamp_seconds: note.timestamp_seconds,
-                    })),
-                }),
-            });
-
-            if (!response.ok) throw new Error('Topic service request failed');
-            const data = await response.json() as { topics: KeyTopic[] };
-            setKeyTopics(data.topics);
-        } catch (err) {
-            console.error('Error generating key topics:', err);
-            setTopicError('Could not generate topics. Try again.');
-            setKeyTopics([]);
-        } finally {
-            setTopicLoading(false);
-        }
-    };
-
+    /* SEARCH */
+    // looks for notes within the video folder
     const filteredNotes = useMemo(() => {
         let scoped = selectedVideoId
             ? notes.filter((note) => note.video_id === selectedVideoId)
@@ -331,14 +298,15 @@ export default function NotesPage({ setPage }: NotesPageP) {
         return scoped;
     }, [notes, searchTerm, selectedVideoId]);
 
+    // only notes for a video - for key words generator 
+    const notesForSelectedVideo = useMemo(
+        () => notes.filter((note) => note.video_id === selectedVideoId),
+        [notes, selectedVideoId]
+    );
+
     const selectedVideo = selectedVideoId
         ? videoFolders.find((video) => video.id === selectedVideoId) || null
         : null;
-
-    useEffect(() => {
-        setKeyTopics([]);
-        setTopicError(null);
-    }, [selectedVideoId]);
 
     if (loading) {
         return (
@@ -383,36 +351,17 @@ export default function NotesPage({ setPage }: NotesPageP) {
                                     {' '}·{' '}
                                     <span className="notes-rating">
                                         {ratingsByVideoId[selectedVideo.id]}/5{' '}
+                                        {/* max 5 pencils */}
                                         {'✏️'.repeat(Math.max(0, Math.min(5, Math.floor(ratingsByVideoId[selectedVideo.id]))))}
                                     </span>
                                 </>
                             )}
                         </p>
-                        <div className="key-topics-panel">
-                            <div className="key-topics-heading">
-                                <div>
-                                    <h2>Key topics</h2>
-                                    <p>Generated from all notes for this video.</p>
-                                </div>
-                                <button
-                                    className="key-topics-button"
-                                    onClick={generateKeyTopics}
-                                    disabled={topicLoading || !notes.some((note) => note.video_id === selectedVideoId)}
-                                >
-                                    {topicLoading ? 'Finding topics...' : 'Generate topics'}
-                                </button>
-                            </div>
-                            {topicError && <p className="key-topics-error">{topicError}</p>}
-                            {keyTopics.length > 0 && (
-                                <div className="key-topics-list" aria-label="Generated key topics">
-                                    {keyTopics.map((topic) => (
-                                        <span key={topic.term} className="key-topic-chip" title={`Mentioned in ${topic.note_count} note${topic.note_count === 1 ? '' : 's'}`}>
-                                            {topic.term}
-                                        </span>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
+
+                        <KeyTopicsPanel
+                            videoId={selectedVideo.id}
+                            notes={notesForSelectedVideo}
+                        />
                     </>
                 )}
 
@@ -448,76 +397,33 @@ export default function NotesPage({ setPage }: NotesPageP) {
                         )}
 
                         <div className="notes-card-grid">
-                            {filteredNotes.map((note) => {
-                                const videoTimeMarker = formatTime(note.timestamp_seconds);
-
-                                return (
-                                    <div key={note.id} className="note-card">
-                                        <div className="note-card-header">
-                                            <button
-                                                className="note-card-timestamp"
-                                                onClick={() => openVideoAtTimestamp(note)}
-                                            >
-                                                {videoTimeMarker ? `@${videoTimeMarker}` : 'Open'}
-                                            </button>
-
-                                            <div className="note-card-actions">
-                                                {editingId !== note.id && (
-                                                    <button
-                                                        className="note-card-edit"
-                                                        onClick={() => startEdit(note)}
-                                                        aria-label="Edit note"
-                                                    >
-                                                        ✎
-                                                    </button>
-                                                )}
-
-                                                <button
-                                                    className="note-card-delete"
-                                                    onClick={() => handleDelete(note.id)}
-                                                    disabled={deletingId === note.id}
-                                                    aria-label="Delete note"
-                                                >
-                                                    {deletingId === note.id ? '...' : '✕'}
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        {editingId === note.id ? (
-                                            <div className="note-card-edit-area">
-                                                <textarea
-                                                    className="note-card-textarea"
-                                                    value={editingText}
-                                                    onChange={(e) => setEditingText(e.target.value)}
-                                                    rows={4}
-                                                    autoFocus
-                                                />
-                                                <div className="note-card-edit-actions">
-                                                    <button
-                                                        className="note-card-cancel-btn"
-                                                        onClick={cancelEdit}
-                                                        disabled={savingId === note.id}
-                                                    >
-                                                        Cancel
-                                                    </button>
-                                                    <button
-                                                        className="note-card-save-btn"
-                                                        onClick={() => saveEdit(note.id)}
-                                                        disabled={savingId === note.id}
-                                                    >
-                                                        {savingId === note.id ? 'Saving...' : 'Save'}
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <>
-                                                <p className="note-card-content">{note.content}</p>
-                                                <p className="note-card-date">{formatDate(note.created_at)}</p>
-                                            </>
-                                        )}
-                                    </div>
-                                );
-                            })}
+                            {filteredNotes.map((note) => (
+                                <NoteCard
+                                    key={note.id}
+                                    note={{
+                                        id: note.id,
+                                        content: note.content,
+                                        created_at: note.created_at,
+                                        timestamp_seconds: note.timestamp_seconds,
+                                        isPrivate: note.is_private,
+                                        profileId: note.profile_id,
+                                    }}
+                                    currentUserId={userId || ''}
+                                    isEditing={editingId === note.id}
+                                    editingText={editingText}
+                                    editingIsPrivate={editingIsPrivate}
+                                    editingError={null}
+                                    isSaving={savingId === note.id}
+                                    isDeleting={deletingId === note.id}
+                                    onOpen={() => openVideoAtTimestamp(note)}
+                                    onStartEdit={() => startEdit(note)}
+                                    onCancelEdit={cancelEdit}
+                                    onSaveEdit={() => saveEdit(note.id)}
+                                    onEditingTextChange={setEditingText}
+                                    onEditingPrivacyChange={setEditingIsPrivate}
+                                    onDelete={() => handleDelete(note.id)}
+                                />
+                            ))}
                         </div>
                     </>
                 )}

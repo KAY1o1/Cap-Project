@@ -1,21 +1,3 @@
-:root {
-    --font-main: "Inter Tight", sans-serif;
-
-    --accent: #f6ea7f;
-    --active: #f6ea7f;
-
-    --bg: #110e01;
-    --panel-bg: #1a1605;
-    --card-bg: #201c08;
-
-    --link-bg: color-mix(in srgb, var(--accent) 20%, transparent);
-
-    --text-primary: #fdfae2;
-    --text-muted: #bfbfbf;
-
-    --border: #303030;
-}
-
 .video-sidebar {
     width: 280px;
     flex-shrink: 0;

@@ -16,6 +16,7 @@ type VideoSidebarP = {
     onSelect: (videoId: string | null) => void;
 };
 
+// iso to "Jan 1"
 const formatDate = (isoString: string | undefined) => {
     if (!isoString) return '';
     const date = new Date(isoString);
@@ -34,22 +35,26 @@ export default function VideoSidebar({ videos, selectedVideoId, onSelect }: Vide
             <div className="recent-list">
                 <h3>Videos</h3>
 
+                {/* no notes */}
                 {videos.length === 0 && (
                     <p className="sidebar-empty">No videos yet</p>
                 )}
 
+                {/* renders each vid in list */}
                 {videos.map((video) => (
                     <div
                         key={video.id}
                         className={`recent ${selectedVideoId === video.id ? 'recent-active' : ''}`}
                         onClick={() => onSelect(video.id)}
                     >
+                        {/*  */}
                         <img
                             className="recent-thumbnail"
                             src={getThumb(video.youtube_video_id)}
                             alt="thumbnail"
                         />
 
+                        {/* meta */}
                         <div className="recent-content">
                             <span className="recent-title">{video.title}</span>
                             <p className="recent-channel">{video.creator || 'Creator'}</p>

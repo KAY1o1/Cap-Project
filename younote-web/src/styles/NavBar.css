@@ -8,7 +8,7 @@
     justify-content: space-between;
     align-items: center;
     /* padding: 1rem 0rem; */
-    background-color: black;
+    background-color: transparent;
     max-width: 950px;
     margin: 0 auto;
     height: 90px;
@@ -32,31 +32,31 @@
 
 .set{
     display: flex;
-    gap: 20px;
 }
 
 .nav-buttons{
     display: flex;
     justify-content: end;
-    gap: 25px;
+    gap: 60px;
 }
 
 .nav-buttons button{
     background: transparent;
     color: rgb(94, 94, 94);
     border: none;
-    padding: 10px 20px;
+    padding: 10px 0px;
     font-size: 0.95rem;
     cursor: pointer;
 
 }
 
 .nav-buttons button:hover{
-    color: white;
+    color: var(--active);
 }
 
 .nav-buttons button:disabled{
-    color: #f6ea7f;
+    color: var(--active);
+    /* color: #E4572E;; */
 }
 
 .profile-section{

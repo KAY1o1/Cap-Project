@@ -1,27 +1,30 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,100..900;1,100..900&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
- 
+
 :root {
     --font-main: "Inter Tight", sans-serif;
- 
-    --accent: #f6ea7f;
-    --active: #f6ea7f;
- 
-    --bg: #110e01;
-    --panel-bg: #1a1605;
-    --card-bg: #201c08;
-    --stat-bg: #3d3d3d;
-    --link-bg: color-mix(in srgb, var(--accent) 20%, transparent);
- 
-    --text-primary: #fdfae2;
-    --text-muted: #bfbfbf;
- 
-    --border: #303030;
- 
-    --link-hover: #ffffff;
+    --text-primary: #353B3C;
+    --text-muted: #4E4D4D;
+    --accent: #4F7FBA;
+    --active: #E4572E;
+    --light: #F3F3F3;
+
+    --bg: rgb(243, 243, 243, 0.1);
+    --panel-bg: rgb(248, 249, 250, .3);            
+    --card-bg: rgba(216, 227, 240, 0.65); 
+
+    --border: rgba(0, 0, 0, 0.15);
+    --danger: #D9534F;             
+    --link-hover: #325A8E;          
+    --link-bg: rgba(79, 127, 186, 0.1);
 }
+
 
 html {
     background-color: var(--bg);
+    background-position: center;
+    background: 
+        linear-gradient(rgba(243, 243, 243, 0.75), rgba(243, 243, 243, 0.75)), 
+        url('https://images.unsplash.com/photo-1695131020187-d3dcdab5016b?q=80&w=985&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D');
 }
 
 .main-content {
