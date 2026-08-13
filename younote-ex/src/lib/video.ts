@@ -11,9 +11,22 @@ export async function ensureVideo(
   title: string,
   creator: string
 ): Promise<string | null> {
+
+  // added this to prevent race condition, until a user is authenticated, cannot save video
+  // so supabase doesnt get a violation error
+  const sessionResponse = await supabase.auth.getSession();
+  const session = sessionResponse.data.session;
+
+  if (session === null || session === undefined)
+  {
+    console.log("[YouNote] ensureVideo: no session yet, skipping");
+    return null;
+  }
+
+
   const response = await supabase
     .from("videos")
-    .upsert( // upsert = update and insert, Postgres uses it (supabase uses postgres)
+    .upsert( // upsert means update and insert, Postgres uses it (supabase uses postgres)
       { 
         youtube_video_id: youtubeVideoId, 
         title: title, 

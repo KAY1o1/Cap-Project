@@ -322,7 +322,9 @@ export default function NotesPanel() {
   }, []);
 
   useEffect(() => {
-    if (!videoId) {
+    // added this to prevent race condition, re-runs once email resolves so
+    // ensureVideo() gets retried automatically instead of staying stuck
+    if (videoId === null || email === null) {
       setNotes([]);
       setRating(null);
       setRated(false);
@@ -354,7 +356,7 @@ export default function NotesPanel() {
         setRated(false);
       }
     });
-  }, [videoId]);
+  }, [videoId, email]); // here added email to check if user is authencated to avoid race condition
 
   if (!email) {
     return (
