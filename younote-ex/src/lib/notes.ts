@@ -1,162 +1,272 @@
-// FOR BACKEND: notes
+/*note's CRUD*/
+
 import { supabase } from "./supabase";
 
-type Note = {
+type Note =
+{
   id: string;
   text: string;
   createdAt: number;
   videoTime: number;
-  // renamed isPublic to isPrivate to keep it consistent with the Supabase `is_private` column.
   isPrivate: boolean;
   profileId: string;
   username: string;
 };
 
-// for pop-up
-export type UserStats = {
+export type UserStats =
+{
   videosNoted: number;
   notesSaved: number;
 };
 
-function mapRow(row: any): Note {
+// Helper function to convert raw database row format into our clean Note object structure
+function mapRow(row: any): Note
+{
+  let usernameValue = "Unknown User";
+  if (row.profiles !== null && row.profiles !== undefined)
+  {
+    if (row.profiles.username !== null && row.profiles.username !== undefined)
+    {
+      usernameValue = row.profiles.username;
+    }
+  }
+
+  const createdTimestamp = new Date(row.created_at).getTime();
+
   return {
     id: row.id,
     text: row.content,
-    createdAt: new Date(row.created_at).getTime(),
+    createdAt: createdTimestamp,
     videoTime: row.timestamp_seconds,
     isPrivate: row.is_private,
     profileId: row.profile_id,
-    username: row.profiles?.username ?? "Unknown User",
+    username: usernameValue,
   };
 }
 
-// Get the signed-in user's id, so the UI can check note ownership.
-export async function getCurrentUserId(): Promise<string | null> {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+// Get the ID of the user currently logged in so we can check note ownership
+export async function getCurrentUserId(): Promise<string | null>
+{
+  const sessionResponse = await supabase.auth.getSession();
+  const sessionData = sessionResponse.data;
 
-  return session?.user.id ?? null;
+  if (sessionData === null || sessionData === undefined)
+  {
+    return null;
+  }
+
+  const currentSession = sessionData.session;
+  if (currentSession === null || currentSession === undefined) 
+  {
+    return null;
+  }
+
+  const user = currentSession.user;
+  if (user === null || user === undefined) {
+    return null;
+  }
+
+  return user.id;
 }
 
-// Load notes for a video (own notes + public notes from others, per RLS).
-export async function fetchNotes(videoDbId: string): Promise<Note[]> {
-  const { data, error } = await supabase
-  .from("notes")
-  .select(`
-    *,
-    profiles (
-      username
-    )
-  `)
-  .eq("video_id", videoDbId)
-  .order("timestamp_seconds", { ascending: true });
+// Load all notes associated with a specific video from the database
+export async function fetchNotes(videoDbId: string): Promise<Note[]>
+{
+  const response = await supabase // this is the sql part
+    .from("notes")
+    .select(`
+      *,
+      profiles (
+        username
+      )
+    `)
+    .eq("video_id", videoDbId)
+    .order("timestamp_seconds", { ascending: true });
 
-  if (error) {
+
+  const data = response.data;
+  const error = response.error;
+
+  if (error !== null && error !== undefined)
+  {
     console.error("[YouNote] fetchNotes failed:", error);
     return [];
   }
 
-  return (data ?? []).map(mapRow);
+  if (data === null || data === undefined)
+  {
+    return []; // return silently
+  }
+
+  const notesList: Note[] = [];
+  for (let i = 0; i < data.length; i++)
+  {
+    const mappedNote = mapRow(data[i]);
+    notesList.push(mappedNote);
+  }
+
+  return notesList;
 }
 
-// Create a note.
-export async function createNote(
+// Save a brand new note into the database for the current user and video
+export async function createNote( 
   videoDbId: string,
   content: string,
   timestampSeconds: number,
   isPrivate: boolean
-): Promise<Note | null> {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+): Promise<Note | null>
 
-  const user = session?.user;
-  if (!user) {
+{
+  const sessionResponse = await supabase.auth.getSession();
+  const sessionData = sessionResponse.data;
+
+  if (sessionData === null || sessionData === undefined) {
     console.log("[YouNote] createNote: no session yet, skipping");
     return null;
   }
 
-  const { data, error } = await supabase
+  const currentSession = sessionData.session;
+  if (currentSession === null || currentSession === undefined) {
+    console.log("[YouNote] createNote: no session yet, skipping");
+    return null;
+  }
+
+  const user = currentSession.user;
+  if (user === undefined || user === null) {
+    console.log("[YouNote] createNote: no session yet, skipping");
+    return null;
+  }
+
+  const roundedTime = Math.floor(timestampSeconds);
+  const newUuid = crypto.randomUUID();
+
+  const insertResponse = await supabase
     .from("notes")
     .insert({
-      id: crypto.randomUUID(),
+      id: newUuid,
       profile_id: user.id,
       video_id: videoDbId,
-      timestamp_seconds: Math.floor(timestampSeconds),
-      content,
+      timestamp_seconds: roundedTime,
+      content: content,
       is_private: isPrivate,
     })
     .select()
     .single();
 
-  if (error) {
-  console.error("[YouNote] createNote failed:", error);
-  return null;
+  const data = insertResponse.data;
+  const error = insertResponse.error;
+
+  if (error !== null && error !== undefined)
+  {
+    console.error("[YouNote] createNote failed:", error);
+    return null;
+  }
+
+  const profileResponse = await supabase
+    .from("profiles")
+    .select("username")
+    .eq("id", user.id)
+    .single();
+
+  const profile = profileResponse.data;
+  const profileError = profileResponse.error;
+
+  if (profileError !== null && profileError !== undefined)
+  {
+    console.error("[YouNote] fetching username failed:", profileError);
+  }
+
+  let usernameToUse = "Unknown User";
+  if (profile !== null && profile !== undefined)
+  {
+    if (profile.username !== null && profile.username !== undefined)
+    {
+      usernameToUse = profile.username;
+    }
+  }
+
+  const finalNote = mapRow(data);
+  finalNote.username = usernameToUse;
+
+  return finalNote;
 }
 
-const { data: profile, error: profileError } = await supabase
-  .from("profiles")
-  .select("username")
-  .eq("id", user.id)
-  .single();
+// Update an existing note's text or privacy setting
+export async function updateNote(id: string, content: string, isPrivate: boolean): Promise<void> 
+{
+  const currentTimeString = new Date().toISOString();
 
-if (profileError) {
-  console.error("[YouNote] fetching username failed:", profileError);
-}
-
-return {
-  ...mapRow(data),
-  username: profile?.username ?? "Unknown User",
-};
-}
-
-// Edit a note's text and/or privacy.
-export async function updateNote(id: string, content: string, isPrivate: boolean): Promise<void> {
-  const { error } = await supabase
+  const response = await supabase
     .from("notes")
-    .update({ content, is_private: isPrivate, updated_at: new Date().toISOString() })
+    .update(
+    { 
+      content: content, 
+      is_private: isPrivate, 
+      updated_at: currentTimeString 
+    })
     .eq("id", id);
 
-  if (error) console.error("[YouNote] updateNote failed:", error);
+  const error = response.error;
+
+  if (error !== null && error !== undefined) 
+  {
+    console.error("[YouNote] updateNote failed:", error);
+  }
 }
 
-// Delete a note.
-export async function deleteNote(id: string): Promise<void> {
-  const { error } = await supabase.from("notes").delete().eq("id", id);
+// Delete a specific note by its unique ID
+export async function deleteNote(id: string): Promise<void> 
+{
+  const response = await supabase.from("notes").delete().eq("id", id);
+  const error = response.error;
 
-  if (error) console.error("[YouNote] deleteNote failed:", error);
+  if (error !== null && error !== undefined) {
+    console.error("[YouNote] deleteNote failed:", error);
+  }
 }
 
-// UNDO/REDO: re-insert a previously-deleted note with its original id.
-export async function restoreNote(note: Note, videoDbId: string): Promise<void> {
-  const { error } = await supabase.from("notes").insert({
+// Re-insert a previously deleted note back into the database (used for undo)
+export async function restoreNote(note: Note, videoDbId: string): Promise<void>
+{
+  const roundedTime = Math.floor(note.videoTime);
+
+  const response = await supabase.from("notes").insert({
     id: note.id,
     profile_id: note.profileId,
     video_id: videoDbId,
-    timestamp_seconds: Math.floor(note.videoTime),
+    timestamp_seconds: roundedTime,
     content: note.text,
     is_private: note.isPrivate,
   });
 
-  if (error) console.error("[YouNote] restoreNote failed:", error);
+  const error = response.error;
+
+  if (error !== null && error !== undefined)
+  {
+    console.error("[YouNote] restoreNote failed:", error);
+  }
 }
 
-
-///////
-// GET note stats (nums) for popup: how many total notes and diff videos
-export async function getUserStats(profileId: string): Promise<UserStats> {
-  const { data, error } = await supabase
+// Count how many total notes and distinct videos a user has worked with
+export async function getUserStats(profileId: string): Promise<UserStats>
+{
+  const response = await supabase
     .from("notes")
     .select("video_id")
     .eq("profile_id", profileId);
 
-  if (error || !data) {
+  const data = response.data;
+  const error = response.error;
+
+  if (error !== null && error !== undefined || data === null || data === undefined) {
     console.error("[YouNote] getUserStats failed:", error);
     return { videosNoted: 0, notesSaved: 0 };
   }
 
-  const uniqueVideoIds = new Set(data.map((row) => row.video_id));
+  const uniqueVideoIds = new Set<string>();
+  for (let i = 0; i < data.length; i++) {
+    uniqueVideoIds.add(data[i].video_id);
+  }
 
   return {
     videosNoted: uniqueVideoIds.size,
@@ -164,8 +274,6 @@ export async function getUserStats(profileId: string): Promise<UserStats> {
   };
 }
 
-// GET video information and date noted
-// entry per video, most recently noted first, note count per video
 export type RecentVideo = {
   videoId: string;
   youtubeVideoId: string;
@@ -175,43 +283,57 @@ export type RecentVideo = {
   noteCount: number;
 };
 
+// Fetch a list of videos the user recently took notes on, ordered by most recent
 export async function getRecentVideos(
   profileId: string,
   limit = 2
 ): Promise<RecentVideo[]> {
-  // db notes already newest first
-  const { data, error } = await supabase
+  const response = await supabase
     .from("notes")
     .select("video_id, created_at, videos(youtube_video_id, title, creator)")
     .eq("profile_id", profileId)
     .order("created_at", { ascending: false });
 
-  if (error || !data) {
+  const data = response.data;
+  const error = response.error;
+
+  if (error !== null && error !== undefined || data === null || data === undefined)
+  {
     console.error("[YouNote] getRecentVideos failed:", error);
     return [];
   }
 
-  // groups note by video
   const byVideo = new Map<string, RecentVideo>();
 
-  for (const row of data) {
+  for (let i = 0; i < data.length; i++) {
+    const row = data[i];
     const video = row.videos as any;
-    if (!video) continue;
+
+    if (video === null || video === undefined) {
+      continue;
+    }
 
     const existing = byVideo.get(row.video_id);
-    if (existing) {
-      existing.noteCount += 1;
-    } else {
+    if (existing !== undefined)
+    {
+      existing.noteCount = existing.noteCount + 1;
+    } 
+    else 
+    {
+      const parsedTime = new Date(row.created_at).getTime();
       byVideo.set(row.video_id, {
         videoId: row.video_id,
         youtubeVideoId: video.youtube_video_id,
         title: video.title,
         creator: video.creator,
-        lastNoteAt: new Date(row.created_at).getTime(),
+        lastNoteAt: parsedTime,
         noteCount: 1,
       });
     }
   }
 
-  return Array.from(byVideo.values()).slice(0, limit);
+  const allValues = Array.from(byVideo.values());
+  const slicedValues = allValues.slice(0, limit);
+
+  return slicedValues;
 }
