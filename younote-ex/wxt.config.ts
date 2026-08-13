@@ -2,10 +2,16 @@ import { defineConfig } from 'wxt';
 import { fileURLToPath } from 'node:url';
 
 export default defineConfig({
-  // Tells Chrome to enable chrome.storage for your group's code
+
   srcDir: 'src',
-  manifest: {
+  manifest:
+  {
     permissions: ['storage'],
+  },
+
+  webExt:
+  {
+    disabled: true,
   },
 
   vite: () => ({

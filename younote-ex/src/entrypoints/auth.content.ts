@@ -1,16 +1,32 @@
+/*
+catches the Google OAuth code after the redirect, 
+exchanges it with Supabase to establish the user's session
+then cleans the temporary code out of the URL.
+*/
+
 import { supabase } from "../lib/supabase";
 
-// authentication for non-popup windows, like 
-// after Google redirects back, swap the ?code= for a session
-export default defineContentScript({
+export default defineContentScript({ // this is a WXT object
   matches: ["*://*.youtube.com/*"],
   runAt: "document_start",
-  async main() {
-    const code = new URLSearchParams(window.location.search).get("code");
-    if (!code) return;
+
+  async main()
+  {
+    const currentSearch = window.location.search;
+    const searchParams = new URLSearchParams(currentSearch);
+    const code = searchParams.get("code");
+
+    if (code === null)
+    {
+      return;
+    }
+
     await supabase.auth.exchangeCodeForSession(code);
-    const url = new URL(window.location.href);
-    url.searchParams.delete("code");
-    window.history.replaceState({}, "", url.toString());
+
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.delete("code");
+
+    const cleanUrlString = currentUrl.toString();
+    window.history.replaceState({}, "", cleanUrlString);
   },
 });

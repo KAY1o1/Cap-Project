@@ -1,14 +1,19 @@
-// FOR BACKEND: profiles
+/*
+make sure user has an authenticated session,
+gets the user's ID and email, creates a username from the email
+then saves/updates that information in the `profiles` table in Supabase
+*/
 import { supabase } from "./supabase";
 
-// Make sure the signed-in user has a row in `profiles`.
-export async function ensureProfile(): Promise<void> {
+export async function ensureProfile(): Promise<void>
+{
   const {
     data: { session },
   } = await supabase.auth.getSession();
 
   const user = session?.user;
-  if (!user) {
+  if (!user)
+  {
     console.log("[YouNote] ensureProfile: no session yet, skipping");
     return;
   }
@@ -23,9 +28,12 @@ export async function ensureProfile(): Promise<void> {
       username,
     });
 
-  if (error) {
-    console.error("[YouNote] ensureProfile failed:", error);
-  } else {
+  if (error)
+  {
+    console.error("[YouNote] ensureProfile failed:", error); // print to console, for debugging
+  } 
+  else
+  {
     console.log("[YouNote] Profile saved:", user.email);
   }
 }
