@@ -1,47 +1,86 @@
-// FOR BACKEND: rating
+/*
+checks whether the logged-in user has rated a specific video 
+and returns their rating if one exists
+and it saves or updates their rating in the video_ratings table when they submit one
+*/
+
 import { supabase } from "./supabase";
 
-// Load the signed-in user's rating for a video, if they've rated it.
-export async function fetchRating(videoDbId: string): Promise<number | null> {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+export async function fetchRating(videoDbId: string): Promise<number | null> 
+{
+  const sessionResponse = await supabase.auth.getSession();
 
-  const user = session?.user;
-  if (!user) return null;
+  const sessionData = sessionResponse.data;
+  if (sessionData === null)
+  {
+    return null;
+  }
 
-  const { data, error } = await supabase
+  const currentSession = sessionData.session;
+  if (currentSession === null)
+  {
+    return null;
+  }
+
+  const user = currentSession.user;
+  if (user === undefined || user === null)
+  {
+    return null;
+  }
+
+  const queryResponse = await supabase
     .from("video_ratings")
     .select("rating")
     .eq("video_id", videoDbId)
     .eq("profile_id", user.id)
     .maybeSingle();
 
-  if (error) {
+  const data = queryResponse.data;
+  const error = queryResponse.error;
+
+  if (error !== null) {
     console.error("[YouNote] fetchRating failed:", error);
     return null;
   }
 
-  return data?.rating ?? null;
+  if (data === null || data === undefined) { // if user hasnt given a rating, record nothing
+    return null;
+  }
+
+  return data.rating;
 }
 
-// Save the signed-in user's rating for a video.
-export async function saveRatingToSupabase(videoDbId: string, rating: number): Promise<void> {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+export async function saveRatingToSupabase(videoDbId: string, rating: number): Promise<void>
+{
+  const sessionResponse = await supabase.auth.getSession();
+  const sessionData = sessionResponse.data;
 
-  const user = session?.user;
-  if (!user) {
+  if (sessionData === null) {
     console.log("[YouNote] saveRating: no session yet, skipping");
     return;
   }
 
-  const { error } = await supabase.from("video_ratings").upsert({
+  const currentSession = sessionData.session;
+  if (currentSession === null) {
+    console.log("[YouNote] saveRating: no session yet, skipping");
+    return;
+  }
+
+  const user = currentSession.user;
+  if (user === undefined || user === null) {
+    console.log("[YouNote] saveRating: no session yet, skipping");
+    return;
+  }
+
+  const upsertResponse = await supabase.from("video_ratings").upsert({
     profile_id: user.id,
     video_id: videoDbId,
-    rating,
+    rating: rating,
   });
 
-  if (error) console.error("[YouNote] saveRating failed:", error);
+  const error = upsertResponse.error;
+
+  if (error !== null) {
+    console.error("[YouNote] saveRating failed:", error);
+  }
 }
