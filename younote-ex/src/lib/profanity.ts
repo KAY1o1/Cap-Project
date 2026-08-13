@@ -1,4 +1,8 @@
-// FILTER: hateful speech — blocks racist/hateful language in notes before they're saved.
+/*
+only English for now.
+Build the profanity and offensive language matcher using the recommended English dataset and transformers
+*/
+
 import { RegExpMatcher, englishDataset, englishRecommendedTransformers } from "obscenity";
 
 const matcher = new RegExpMatcher({
@@ -6,9 +10,15 @@ const matcher = new RegExpMatcher({
   ...englishRecommendedTransformers,
 });
 
-export function containsHatefulLanguage(text: string): boolean {
-  return matcher.hasMatch(text);
+
+export function containsHatefulLanguage(text: string): boolean
+{
+  const hasBadWords = matcher.hasMatch(text);
+
+  if (hasBadWords === true)
+  {
+    return true;
+  }
+
+  return false;
 }
-
-// END FILTER
-
