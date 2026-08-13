@@ -66,5 +66,4 @@ Rename both `.env.example` files to `.env` and fill with the correct values
 
 
 ## Demo
-[Watch Here](https://vimeo.com/1217853011?share=copy&fl=sv&fe=ci)
 https://vimeo.com/1217853011
