@@ -51,6 +51,7 @@ describe("fetchNotes (read)", () => {
         videoTime: 42,
         isPrivate: true,
         profileId: "user-1",
+        username: "Unknown User",
       },
     ]);
   });
@@ -92,7 +93,17 @@ describe("createNote (create)", () => {
     });
     const select = vi.fn().mockReturnValue({ single });
     const insert = vi.fn().mockReturnValue({ select });
-    from.mockReturnValue({ insert });
+
+    const profileSingle = vi.fn().mockResolvedValue({
+      data: { username: "testuser" },
+      error: null,
+    });
+    const profileEq = vi.fn().mockReturnValue({ single: profileSingle });
+    const profileSelect = vi.fn().mockReturnValue({ eq: profileEq });
+
+    from.mockImplementation((table: string) =>
+      table === "notes" ? { insert } : { select: profileSelect }
+    );
 
     const result = await createNote("video-1", "hi", 10.9, false);
 
@@ -106,6 +117,7 @@ describe("createNote (create)", () => {
       })
     );
     expect(result?.text).toBe("hi");
+    expect(result?.username).toBe("testuser");
   });
 });
 
